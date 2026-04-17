@@ -21,6 +21,9 @@ mkpkg-temp
 # options
 /.libreelec
 
+# local editor settings
+/.vscode/
+
 # private working directory
 /.work/
 

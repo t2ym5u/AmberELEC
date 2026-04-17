@@ -63,7 +63,7 @@ if [ -z "$HOST_LIBDIR" ]; then
 
   # ubuntu/debian specific "multiarch support"
   export MACHINE_HARDWARE_NAME="$(uname -m)"
-  export MACHINE_HARDWARE_PLATFORM="$(uname -i)"
+  export MACHINE_HARDWARE_PLATFORM="$(uname -i 2>/dev/null || uname -m)"
   FAMILY_TRIPLET=${HOST_NAME/${MACHINE_HARDWARE_NAME}/${MACHINE_HARDWARE_PLATFORM}}
   if [ -d /lib/$FAMILY_TRIPLET ]; then
     HOST_LIBDIR="$HOST_LIBDIR /lib/$FAMILY_TRIPLET"

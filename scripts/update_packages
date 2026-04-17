@@ -9,6 +9,14 @@ RAPACKAGES="retroarch-assets libretro-database core-info glsl-shaders"
 EMUPACKAGES="scummvmsa advancemame hypseus-singe amiberry hatarisa openbor solarus lzdoom gzdoom raze zmusic mupen64plussa-audio-sdl mupen64plussa-core mupen64plussa-input-sdl mupen64plussa-rsp-hle mupen64plussa-ui-console mupen64plussa-video-glide64mk2 mupen64plussa-video-rice hydracastlelabyrinth sdlpop opentyrian"
 BLOCKLIST="config/blocklist"
 
+sedi() {
+  local tmp file
+  tmp=$(mktemp /tmp/sedi.XXXXXX) || return 1
+  file="${@: -1}"
+  sed "${@:1:$#-1}" "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
 source "${OPTIONS}"
 PACKAGES_ALL=" ${RAPACKAGES} ${LIBRETRO_CORES} ${LIBRETRO_CORES_EXTRA} ${EMUPACKAGES}"
 
@@ -33,17 +41,17 @@ do
     echo "${PKG_NAME} is up to date (${UPS_VERSION})"
   else
     echo "${PKG_NAME} updated from ${PKG_VERSION} to ${UPS_VERSION}"
-    sed -i "s/PKG_VERSION=\"${PKG_VERSION}/PKG_VERSION=\"${UPS_VERSION}/" $f
+    sedi "s/PKG_VERSION=\"${PKG_VERSION}/PKG_VERSION=\"${UPS_VERSION}/" "$f"
   fi
 
   if [[ ! "${PKG_URL}" =~ git$ ]]; then
 
    if grep -q PKG_SHA256 "${f}"; then
     echo "PKG_SHA256 exists on ${f}, clearing"
-    sed -i "s/PKG_SHA256=.*\$/PKG_SHA256=\"\"/" ${f}
+    sedi "s/PKG_SHA256=.*\$/PKG_SHA256=\"\"/" "${f}"
    else
     echo "PKG_SHA256 does not exists on ${f}, creating"
-    sed -i -e "s/PKG_VERSION=\"${UPS_VERSION}\(.*\)\"/PKG_VERSION=\"${UPS_VERSION}\1\"\nPKG_SHA256=\"\"/g" ${f}
+    sedi -e "s/PKG_VERSION=\"${UPS_VERSION}\(.*\)\"/PKG_VERSION=\"${UPS_VERSION}\"\1\"\nPKG_SHA256=\"\"/g" "${f}"
    fi
    source "${f}"
    ./scripts/get "${PKG_NAME}" >/dev/null
@@ -52,8 +60,8 @@ do
    else
      SHA=$(cat ./sources/${PKG_NAME}/linux-$LINUX-${UPS_VERSION}.tar.gz.sha256 ||:)
    fi
-   sed -e "/PKG_VERSION=\"${UPS_VERSION}\"/{ N; s/PKG_VERSION=\"${UPS_VERSION}\".*PKG_SHA256=\"\"/PKG_VERSION=\"${UPS_VERSION}\"\nPKG_SHA256=\"${SHA}\"/;}" -i ${f}
+   sedi -e "/PKG_VERSION=\"${UPS_VERSION}\"/{ N; s/PKG_VERSION=\"${UPS_VERSION}\".*PKG_SHA256=\"\"/PKG_VERSION=\"${UPS_VERSION}\"\nPKG_SHA256=\"${SHA}\"/;}" "${f}"
   else
-   sed "/^PKG_SHA256=/d" -i ${f}
+   sedi "/^PKG_SHA256=/d" "${f}"
  fi
 done
