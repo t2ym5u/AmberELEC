@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="gambatte"
-PKG_VERSION="0b95f252ba9cdb366b4d87e6236b0a63f4305cba"
-PKG_SHA256="f478fee01d01370c4be80d5be70a5564e30bc53fecfe9014408947df458838a5"
+PKG_VERSION="155bdda7899604c471def7953558d52ce8c84906"
+PKG_SHA256="d5d0c2f12ea47463e31b64fac18d99b317a9f8cdf4664343ab8bbd5a635aa94e"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/gambatte-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
