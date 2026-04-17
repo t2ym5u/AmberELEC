@@ -136,6 +136,8 @@ TMPDIR=/tmp make docker-update
 
 The update process will bump package `PKG_VERSION` values and refresh `PKG_SHA256` checksums for non-git packages. Keep the changes in a dedicated branch and review them before pushing.
 
+A GitHub Actions workflow is also available at `.github/workflows/update-dependencies.yaml`. It can be triggered manually or runs weekly, and creates a PR automatically when package metadata changes.
+
 Example building with docker:
 ```
 git clone https://github.com/AmberELEC/AmberELEC.git AmberELEC

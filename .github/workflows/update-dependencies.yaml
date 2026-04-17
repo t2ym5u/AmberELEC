@@ -1,0 +1,47 @@
+name: update-dependencies
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run dependency metadata update
+        run: |
+          set -e
+          make docker-update
+
+      - name: Check for repository changes
+        id: changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git status --porcelain | grep -q .; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create pull request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Update package dependency metadata'
+          title: 'Automated package dependency metadata update'
+          body: |
+            This PR updates `PKG_VERSION` and `PKG_SHA256` values using `make update`.
+            Review the package metadata changes before merging.
+          base: dev
+          branch: update-dependencies-${{ github.run_number }}
+          labels: dependencies, automation
