@@ -15,6 +15,8 @@ env:
 jobs:
   launch-dev-release-if-needed:
       runs-on: ubuntu-latest
+      permissions:
+        contents: write
       steps:
         #- uses: hmarr/debug-action@v2
         #  name: debug
@@ -49,7 +51,7 @@ jobs:
               echo "last dev date: ${last_dev_date}"
               popd
               
-              echo changes=$(git log --after=" >> $GITHUB_OUTPUT${last_dev_date}" --oneline | wc -l)
+              echo "changes=$(git log --after="${last_dev_date}" --oneline | wc -l)" >> $GITHUB_OUTPUT
               
               release_notes="$(git log --after=\\"${last_dev_date}\\" --oneline | sed 's|^|${{ steps.full_name.outputs.full_name }}@|g')"
               
@@ -67,7 +69,7 @@ jobs:
           if: ${{ steps.changes.outputs.changes }} != '0'
           uses: peter-evans/repository-dispatch@v3
           with:
-            token: ${{ secrets.TRIGGER_BUILD_TOKEN }}
+            token: ${{ secrets.TRIGGER_BUILD_TOKEN || github.token }}
             repository: ${{ steps.full_name.outputs.full_name }}
             event-type: release-dev
             client-payload: |
