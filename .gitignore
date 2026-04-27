@@ -58,3 +58,6 @@ release/
 lib32-package/
 
 .lastbuild
+
+# bump script report output
+bump_report.log
