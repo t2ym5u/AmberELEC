@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="fmsx"
-PKG_VERSION="6b807c588d63677770f7f2ed8b94ca0e9da256ce"
-PKG_SHA256="ebffd094324bfe4a13cc20e629b2b506abf208d91d9677e8e4b0f424a182888a"
+PKG_VERSION="3933db571485b7c6572968f154fa8621c5568357"
+PKG_SHA256="a173d6e15681cf13b757d0445521cd7adf94b4c9a2782fd67e53e982173f6c42"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/fmsx-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
