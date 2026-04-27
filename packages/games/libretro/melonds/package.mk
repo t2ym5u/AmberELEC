@@ -2,7 +2,7 @@
 # Copyright (C) 2024-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="melonds"
-PKG_VERSION="e548eba517ccb964ddba31dcf8f0136041f5bb05"
+PKG_VERSION="634e51477364edc39aaccd3bebf8bcab5776148c"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/melonds"
 PKG_URL="${PKG_SITE}.git"
