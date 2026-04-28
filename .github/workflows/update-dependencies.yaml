@@ -32,6 +32,15 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate diff summary
+        id: diff_summary
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          summary=$(git diff --stat HEAD)
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$summary" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v5
@@ -42,6 +51,13 @@ jobs:
           body: |
             This PR updates `PKG_VERSION` and `PKG_SHA256` values using `make update`.
             Review the package metadata changes before merging.
+
+            <details><summary>Changed packages</summary>
+
+            ```
+            ${{ steps.diff_summary.outputs.summary }}
+            ```
+            </details>
           base: dev
           branch: update-dependencies-${{ github.run_number }}
           labels: dependencies, automation
