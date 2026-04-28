@@ -44,6 +44,7 @@ DRY_RUN=false
 ONLY_RA=false
 ONLY_CORES=false
 TARGET_CORE=""
+JOBS=1
 REPORT_FILE="bump_report.log"
 
 usage() {
@@ -54,6 +55,7 @@ Usage: $(basename "$0") [options]
   --only-ra        Only bump RetroArch and its companion packages
   --only-cores     Only bump libretro cores (skip RetroArch)
   --core <name>    Bump a single package by name
+  --jobs <n>       Process up to N packages in parallel (default: 1)
   --help           Show this message
 
 Environment:
@@ -63,6 +65,7 @@ Examples:
   ./bump_amberelec.sh --dry-run
   ./bump_amberelec.sh --only-ra
   ./bump_amberelec.sh --core snes9x
+  ./bump_amberelec.sh --jobs 8
   GITHUB_TOKEN=ghp_xxx ./bump_amberelec.sh
 EOF
   exit 0
@@ -74,6 +77,7 @@ while [[ $# -gt 0 ]]; do
     --only-ra)    ONLY_RA=true ;;
     --only-cores) ONLY_CORES=true ;;
     --core)       [[ -n "${2:-}" ]] || die "--core requires a name"; TARGET_CORE="$2"; shift ;;
+    --jobs)       [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || die "--jobs requires a positive integer"; JOBS="$2"; shift ;;
     --help|-h)    usage ;;
     *) die "Unknown option: $1. Try --help." ;;
   esac
@@ -263,9 +267,27 @@ echo "=== AmberELEC package bump ==="
 if $DRY_RUN; then echo "    [DRY RUN — files will not be modified]"; fi
 echo ""
 
-for pkg in "${PACKAGES_ALL[@]}"; do
-  bump_package "${pkg}"
-done
+if [[ "${JOBS}" -gt 1 ]]; then
+  declare -a _pids=()
+  _failed=0
+  for pkg in "${PACKAGES_ALL[@]}"; do
+    bump_package "${pkg}" &
+    _pids+=($!)
+    # Drain the pool once it's full
+    while [[ ${#_pids[@]} -ge "${JOBS}" ]]; do
+      wait "${_pids[0]}" 2>/dev/null || _failed=$(( _failed + 1 ))
+      _pids=("${_pids[@]:1}")
+    done
+  done
+  for pid in "${_pids[@]}"; do
+    wait "${pid}" 2>/dev/null || _failed=$(( _failed + 1 ))
+  done
+  [[ "${_failed}" -eq 0 ]] || warn "${_failed} package(s) had errors — see report"
+else
+  for pkg in "${PACKAGES_ALL[@]}"; do
+    bump_package "${pkg}"
+  done
+fi
 
 echo ""
 echo "Report: ${REPORT_FILE}"
