@@ -92,17 +92,21 @@ BLOCKLIST="${REPO_ROOT}/config/blocklist"
 # RetroArch itself lives in packages/games/tools/retroarch, not in libretro/
 RA_PACKAGES=(retroarch retroarch-assets libretro-database core-info glsl-shaders)
 
-EMU_PACKAGES=(
-  scummvmsa advancemame hypseus-singe amiberry hatarisa openbor lzdoom gzdoom
-  raze zmusic mupen64plussa-audio-sdl mupen64plussa-core mupen64plussa-input-sdl
-  mupen64plussa-rsp-hle mupen64plussa-ui-console mupen64plussa-video-glide64mk2
-  mupen64plussa-video-rice hydracastlelabyrinth sdlpop opentyrian
-)
-
 # Derive libretro core list from directory structure — avoids parsing the
 # multiline LIBRETRO_CORES variable in packages/amberelec/package.mk
 libretro_cores() {
   ls "${REPO_ROOT}/packages/games/libretro/"
+}
+
+# Discover standalone emulators and ports from the directory tree.
+# Searches games/emulators/ and games/ports/ at any depth; -mindepth 2
+# skips the games/ports/package.mk meta-package at depth 1.
+emu_packages() {
+  find "${REPO_ROOT}/packages/games/emulators" \
+       "${REPO_ROOT}/packages/games/ports" \
+    -mindepth 2 -name "package.mk" \
+    | sed 's|.*/\([^/]*\)/package\.mk$|\1|' \
+    | sort -u
 }
 
 if [[ -n "${TARGET_CORE}" ]]; then
@@ -111,10 +115,12 @@ elif $ONLY_RA; then
   PACKAGES_ALL=("${RA_PACKAGES[@]}")
 elif $ONLY_CORES; then
   mapfile -t _cores < <(libretro_cores)
-  PACKAGES_ALL=("${_cores[@]}" "${EMU_PACKAGES[@]}")
+  mapfile -t _emus  < <(emu_packages)
+  PACKAGES_ALL=("${_cores[@]}" "${_emus[@]}")
 else
   mapfile -t _cores < <(libretro_cores)
-  PACKAGES_ALL=("${RA_PACKAGES[@]}" "${_cores[@]}" "${EMU_PACKAGES[@]}")
+  mapfile -t _emus  < <(emu_packages)
+  PACKAGES_ALL=("${RA_PACKAGES[@]}" "${_cores[@]}" "${_emus[@]}")
 fi
 
 # ── fetch helpers ──────────────────────────────────────────────────────────
