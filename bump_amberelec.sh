@@ -2,9 +2,17 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Bump PKG_VERSION (and PKG_SHA256) for all tracked AmberELEC packages.
 #
-# Handles two URL patterns found in package.mk files:
+# Handles three URL patterns found in package.mk files:
 #   Pattern A  PKG_URL="${PKG_SITE}.git"             → git clone, no SHA256
 #   Pattern B  PKG_URL="${PKG_SITE}/archive/...gz"   → tarball,  SHA256 required
+#   Pattern C  PKG_VERSION="1.2.3" (semver)          → latest git tag, SHA256 required
+#
+# When PKG_URL is a GitHub archive URL, the git remote is extracted from it
+# directly — PKG_SITE may point to a project website rather than a git host.
+#
+# Packages are silently skipped (no report entry) when they cannot be bumped
+# by design: dynamic versions (derived from a parent package), virtual
+# meta-packages, or static binary URLs with no git remote.
 #
 # Respects PKG_GIT_CLONE_BRANCH when set.
 
@@ -116,11 +124,11 @@ elif $ONLY_RA; then
 elif $ONLY_CORES; then
   mapfile -t _cores < <(libretro_cores)
   mapfile -t _emus  < <(emu_packages)
-  PACKAGES_ALL=("${_cores[@]}" "${_emus[@]}")
+  mapfile -t PACKAGES_ALL < <(printf '%s\n' "${_cores[@]}" "${_emus[@]}" | awk '!seen[$0]++')
 else
   mapfile -t _cores < <(libretro_cores)
   mapfile -t _emus  < <(emu_packages)
-  PACKAGES_ALL=("${RA_PACKAGES[@]}" "${_cores[@]}" "${_emus[@]}")
+  mapfile -t PACKAGES_ALL < <(printf '%s\n' "${RA_PACKAGES[@]}" "${_cores[@]}" "${_emus[@]}" | awk '!seen[$0]++')
 fi
 
 # ── fetch helpers ──────────────────────────────────────────────────────────
@@ -137,11 +145,23 @@ latest_hash() {
   rm -f "${tmp}"
 }
 
+# Get the latest semver tag from a git remote (strips leading 'v', e.g. "1.13.1").
+# Only considers pure numeric dot-separated tags; ignores pre-release suffixes.
+latest_semver_tag() {
+  local site="$1"
+  git ls-remote --tags "${site}" 2>/dev/null \
+    | awk '{print $2}' \
+    | grep -E '^refs/tags/v?[0-9]+\.[0-9]+(\.[0-9]+)*$' \
+    | sed 's|refs/tags/||' | sed 's|^v||' \
+    | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n \
+    | tail -1
+}
+
 # Download a tarball and return its SHA256; prints empty string on failure
 download_sha256() {
   local url="$1"
   local tmp curl_args
-  tmp=$(mktemp /tmp/bump_pkg.XXXXXX.tar.gz)
+  tmp=$(mktemp /tmp/bump_pkg.XXXXXX)
   curl_args=(-fsSL -o "${tmp}")
   [[ -n "${GITHUB_TOKEN:-}" ]] && curl_args+=(-H "Authorization: token ${GITHUB_TOKEN}")
   if ! curl "${curl_args[@]}" "${url}" 2>/dev/null; then
@@ -158,12 +178,18 @@ download_sha256() {
 # Extract PKG_* variable assignments from a package.mk without sourcing the
 # whole file (which would require the full build system environment).
 parse_pkg_vars() {
-  grep -E '^PKG_(NAME|VERSION|SHA256|SITE|URL|GIT_CLONE_BRANCH|GIT_BRANCH)=' "$1" || true
+  grep -E '^PKG_(NAME|VERSION|SHA256|SITE|URL|GIT_CLONE_BRANCH|GIT_BRANCH)=' "$1" \
+    | grep -v '\$(' || true
 }
 
-is_blocklisted() {
-  [[ -f "${BLOCKLIST}" ]] && grep -qx "$1" "${BLOCKLIST}" 2>/dev/null
+# Returns the blocklist comment (reason) for a package, or empty string if not blocklisted.
+blocklist_reason() {
+  [[ -f "${BLOCKLIST}" ]] || return 0
+  local line
+  line=$(grep -E "^$1([[:space:]]|$)" "${BLOCKLIST}" 2>/dev/null | head -1) || true
+  [[ -n "${line}" ]] && sed 's/^[^#]*#[[:space:]]*//' <<< "${line}" || true
 }
+
 
 # ── core bump function ─────────────────────────────────────────────────────
 
@@ -178,9 +204,23 @@ bump_package() {
     return
   fi
 
-  if is_blocklisted "${pkg}"; then
-    skip "${pkg}: blocklisted"
-    printf "%-40s %s\n" "${pkg}" "BLOCKLISTED" >> "${REPORT_FILE}"
+  local _bl_reason
+  _bl_reason=$(blocklist_reason "${pkg}")
+  if [[ -n "${_bl_reason}" ]]; then
+    skip "${pkg}: blocklisted (${_bl_reason})"
+    return
+  fi
+
+  # PKG_VERSION="$(get_pkg_version foo)": version derived at build time from a
+  # parent package — no independent bump needed, follows parent automatically.
+  if grep -qE '^PKG_VERSION=.*\$\(' "${f}" 2>/dev/null; then
+    skip "${pkg}: dynamic version (follows parent package)"
+    return
+  fi
+
+  # Virtual meta-packages have no version or URL of their own.
+  if grep -q '^PKG_SECTION="virtual"' "${f}" 2>/dev/null; then
+    skip "${pkg}: virtual meta-package"
     return
   fi
 
@@ -190,18 +230,74 @@ bump_package() {
   PKG_GIT_CLONE_BRANCH="" PKG_GIT_BRANCH="" PKG_SHA256=""
   eval "$(parse_pkg_vars "${f}")"
 
-  if [[ -z "${PKG_VERSION}" || -z "${PKG_SITE}" ]]; then
-    warn "${pkg}: cannot parse PKG_VERSION / PKG_SITE from ${f}"
+  if [[ -z "${PKG_VERSION}" ]]; then
+    warn "${pkg}: cannot parse PKG_VERSION from ${f}"
     printf "%-40s %s\n" "${pkg}" "PARSE_ERROR" >> "${REPORT_FILE}"
+    return
+  fi
+
+  # No PKG_SITE means a static/binary URL with no git remote to query.
+  if [[ -z "${PKG_SITE}" ]]; then
+    skip "${pkg}: static URL, no git source to track"
     return
   fi
 
   local branch="${PKG_GIT_CLONE_BRANCH:-${PKG_GIT_BRANCH:-}}"
 
+  # If PKG_URL is a GitHub archive, use the repo URL from it as the git remote
+  # rather than PKG_SITE (which may point to a project website, not a git host).
+  local git_remote="${PKG_SITE}"
+  if [[ "${PKG_URL}" =~ ^(https://github\.com/[^/]+/[^/]+)/archive/ ]]; then
+    git_remote="${BASH_REMATCH[1]}"
+  fi
+
+  # ── Pattern C: semver version (e.g. "1.11.0") — query latest git tag ──
+  if [[ "${PKG_VERSION}" =~ ^[0-9]+\.[0-9]+ ]]; then
+    local new_version
+    new_version=$(latest_semver_tag "${git_remote}")
+    if [[ -z "${new_version}" ]]; then
+      warn "${pkg}: cannot fetch tags from ${git_remote}"
+      printf "%-40s %s\n" "${pkg}" "FETCH_ERROR" >> "${REPORT_FILE}"
+      return
+    fi
+    if [[ "${new_version}" == "${PKG_VERSION}" ]]; then
+      skip "${pkg}: up to date (${PKG_VERSION})"
+      printf "%-40s %s\n" "${pkg}" "UP_TO_DATE" >> "${REPORT_FILE}"
+      return
+    fi
+    log "${pkg}: ${PKG_VERSION} → ${new_version}"
+    # Detect whether the URL uses a "v" prefix (e.g. /archive/v1.11.0.tar.gz)
+    local tag_prefix=""
+    [[ "${PKG_URL}" == *"/v${PKG_VERSION}."* ]] && tag_prefix="v"
+    local new_url="${git_remote}/archive/${tag_prefix}${new_version}.tar.gz"
+    log "${pkg}: downloading ${new_url}..."
+    local new_sha256
+    new_sha256=$(download_sha256 "${new_url}")
+    if [[ -z "${new_sha256}" ]]; then
+      warn "${pkg}: archive download failed"
+      printf "%-40s %s\n" "${pkg}" "DOWNLOAD_ERROR" >> "${REPORT_FILE}"
+      return
+    fi
+    if $DRY_RUN; then
+      printf "%-40s WOULD_UPDATE (semver)  %s → %s  sha=%s...\n" \
+        "${pkg}" "${PKG_VERSION}" "${new_version}" "${new_sha256:0:16}" >> "${REPORT_FILE}"
+      return
+    fi
+    sedi "s/PKG_VERSION=\"${PKG_VERSION}\"/PKG_VERSION=\"${new_version}\"/" "${f}"
+    if grep -q "^PKG_SHA256=" "${f}"; then
+      sedi "s/^PKG_SHA256=\"[^\"]*\"/PKG_SHA256=\"${new_sha256}\"/" "${f}"
+    fi
+    ok "${pkg}: updated (semver) ${PKG_VERSION} → ${new_version}"
+    printf "%-40s UPDATED (semver)       %s → %s\n" \
+      "${pkg}" "${PKG_VERSION}" "${new_version}" >> "${REPORT_FILE}"
+    return
+  fi
+
+  # ── Patterns A & B: commit-hash version ───────────────────────────────
   local new_hash
-  new_hash=$(latest_hash "${PKG_SITE}" "${branch}")
+  new_hash=$(latest_hash "${git_remote}" "${branch}")
   if [[ -z "${new_hash}" ]]; then
-    warn "${pkg}: cannot reach ${PKG_SITE} (branch: ${branch:-HEAD})"
+    warn "${pkg}: cannot reach ${git_remote} (branch: ${branch:-HEAD})"
     printf "%-40s %s\n" "${pkg}" "FETCH_ERROR" >> "${REPORT_FILE}"
     return
   fi
@@ -232,7 +328,7 @@ bump_package() {
   fi
 
   # ── Pattern B: archive tarball — update PKG_VERSION + PKG_SHA256 ──────
-  local new_url="${PKG_SITE}/archive/${new_hash}.tar.gz"
+  local new_url="${git_remote}/archive/${new_hash}.tar.gz"
   log "${pkg}: downloading ${new_url}..."
 
   local new_sha256
