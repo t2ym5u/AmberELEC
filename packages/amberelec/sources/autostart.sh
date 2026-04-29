@@ -145,13 +145,6 @@ then
   rsync -a "/usr/config/ppsspp/assets" "${GAMEDATA}/ppsspp/"
 fi
 
-# Create drastic gamedata folder
-if [ ! -d "${GAMEDATA}/drastic" ]
-then
-  mkdir -p "${GAMEDATA}/drastic"
-  ln -sf "${GAMEDATA}/drastic" "/storage/drastic"
-fi
-
 # Controller remaps
 if [ ! -d "${GAMEDATA}/remappings" ]
 then

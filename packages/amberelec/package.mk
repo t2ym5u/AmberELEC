@@ -29,7 +29,7 @@ else
     PKG_EMUS+=" ${LIBRETRO_CORES_EXTRA}"
   fi
 
-  PKG_EMUS+=" advancemame ppssppsa amiberry hatarisa openbor scummvmsa solarus hypseus-singe ecwolf lzdoom gzdoom raze drastic duckstation mupen64plussa piemu yabasanshiroSA"
+  PKG_EMUS+=" advancemame ppssppsa amiberry hatarisa openbor scummvmsa solarus hypseus-singe ecwolf lzdoom gzdoom raze duckstation mupen64plussa piemu yabasanshiroSA"
 fi
 
 PKG_TOOLS="bash dialog grep wget ffmpeg libjpeg-turbo common-shaders glsl-shaders MC util-linux xmlstarlet sixaxis jslisten evtest mpv bluetool rs97-commander-sdl2 jslisten gnupg gzip valgrind strace gdb apitrace odroidgoa-utils rs97-commander-sdl2 textviewer 351files rclone syncthing plymouth-lite imagemagick jstest-sdl sdljoytest evdev-joystick gptokeyb fbgrab"
