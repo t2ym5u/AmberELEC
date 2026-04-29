@@ -4,8 +4,8 @@
 
 ### Don't update, newer commits have issues.
 PKG_NAME="common-shaders"
-PKG_VERSION="b7cdc50258908e8f1906f8fc13a2fac4a9796dc6"
-PKG_SHA256="9cf8ac14e3f971b29421d556cf65b4234468f350d15b466abc635b7cec9ab6fa"
+PKG_VERSION="43eaf9b91857eb8515310c74ae750895d77b20f8"
+PKG_SHA256="4bc1bc61604e91fe314cf781d05b3b99e1991e65a6adafcb8464e633e156a58e"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/RetroPie/common-shaders"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

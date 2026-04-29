@@ -2,7 +2,7 @@
 # Copyright (C) 2023-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="libserialport"
-PKG_VERSION="6f9b03e597ea7200eb616a4e410add3dd1690cb1"
+PKG_VERSION="21b3dfe5f68c205be4086469335fd2fc2ce11ed2"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/sigrokproject/libserialport"
 PKG_URL="${PKG_SITE}.git"

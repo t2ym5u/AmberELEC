@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="o2em"
-PKG_VERSION="dee1076eb70c728d4ff47186aea9cd1c11ce7638"
-PKG_SHA256="8d7202424f8168d797aa69ef69b837862f8c4b44316baac7a2c9286db1d43a71"
+PKG_VERSION="e03d3be88f79fe940b933e53f1515d97313f6c59"
+PKG_SHA256="fe1f0820c91df2b0850b7fab2b50ebebb0c8e5cb49e25301f96ca31728e9831b"
 PKG_LICENSE="Artistic License"
 PKG_SITE="https://github.com/libretro/libretro-o2em"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

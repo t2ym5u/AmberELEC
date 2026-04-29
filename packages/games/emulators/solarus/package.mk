@@ -2,7 +2,7 @@
 # Copyright (C) 2021-present Shanti Gilbert (https://github.com/shantigilbert)
 
 PKG_NAME="solarus"
-PKG_VERSION="3aec70b0556a8d7aed7903d1a3e4d9a18c5d1649"
+PKG_VERSION="b942f8ce5c0562610a93079dcacf53a51fa88540"
 PKG_ARCH="aarch64"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://gitlab.com/solarus-games/solarus"

@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="smsplus-gx"
-PKG_VERSION="41212ee3309fcf84ef0c04317a0916f0e1252c00"
-PKG_SHA256="aa8d138d1b74bf1aa588e1b5c541eb64f07a028db2e8e58e284c4d0f6beaadce"
+PKG_VERSION="6dc7119f6f8d7f6437320405ee3b0de5f227913f"
+PKG_SHA256="a25c3a816b77ac4542c8b448267bad9608cec804c88175cb21022cfd69b830ae"
 PKG_LICENSE="Non-commercial"
 PKG_SITE="https://github.com/libretro/smsplus-gx"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

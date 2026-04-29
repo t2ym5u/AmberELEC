@@ -3,7 +3,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="ppsspp"
-PKG_VERSION="7a9cdf98e9f47d6d8034f998117db9268ffa6eb9"
+PKG_VERSION="dbb34075bc5c72c18291547ff63d7b001ebb29ab"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/hrydgard/ppsspp"
 PKG_URL="https://github.com/hrydgard/ppsspp.git"
