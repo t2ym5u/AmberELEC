@@ -29,6 +29,9 @@ die()  { echo "ERROR: $*" >&2; exit 1; }
 command -v curl >/dev/null || die "curl is required"
 command -v git  >/dev/null || die "git is required"
 
+TMPDIR_BUMP=$(mktemp -d /tmp/bump.XXXXXX)
+trap 'rm -rf "${TMPDIR_BUMP}"' EXIT INT TERM
+
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | cut -d' ' -f1
@@ -40,7 +43,7 @@ sha256_file() {
 # Portable in-place sed (avoids sed -i portability issues between macOS/Linux)
 sedi() {
   local tmp file
-  tmp=$(mktemp /tmp/sedi.XXXXXX) || return 1
+  tmp=$(mktemp "${TMPDIR_BUMP}/sedi.XXXXXX") || return 1
   file="${@: -1}"
   sed "${@:1:$#-1}" "${file}" > "${tmp}"
   mv "${tmp}" "${file}"
@@ -61,7 +64,7 @@ Usage: $(basename "$0") [options]
 
   --dry-run        Show what would change without modifying files
   --only-ra        Only bump RetroArch and its companion packages
-  --only-cores     Only bump libretro cores (skip RetroArch)
+  --only-cores     Only bump libretro cores and standalone emulators/ports (skip RetroArch)
   --core <name>    Bump a single package by name
   --jobs <n>       Process up to N packages in parallel (default: 1)
   --help           Show this message
@@ -103,7 +106,8 @@ RA_PACKAGES=(retroarch retroarch-assets libretro-database core-info glsl-shaders
 # Derive libretro core list from directory structure — avoids parsing the
 # multiline LIBRETRO_CORES variable in packages/amberelec/package.mk
 libretro_cores() {
-  ls "${REPO_ROOT}/packages/games/libretro/"
+  find "${REPO_ROOT}/packages/games/libretro" -maxdepth 1 -mindepth 1 -type d \
+    | sed 's|.*/||'
 }
 
 # Discover standalone emulators and ports from the directory tree.
@@ -139,7 +143,7 @@ latest_hash() {
   local site="$1" branch="${2:-}"
   local ref tmp
   [[ -n "${branch}" ]] && ref="refs/heads/${branch}" || ref="HEAD"
-  tmp=$(mktemp /tmp/bump_lsremote.XXXXXX)
+  tmp=$(mktemp "${TMPDIR_BUMP}/lsremote.XXXXXX")
   git ls-remote "${site}" > "${tmp}" 2>/dev/null || { rm -f "${tmp}"; echo ""; return 0; }
   awk -v r="${ref}" '$2 == r { print substr($1,1,40); exit }' "${tmp}"
   rm -f "${tmp}"
@@ -161,7 +165,7 @@ latest_semver_tag() {
 download_sha256() {
   local url="$1"
   local tmp curl_args
-  tmp=$(mktemp /tmp/bump_pkg.XXXXXX)
+  tmp=$(mktemp "${TMPDIR_BUMP}/pkg.XXXXXX")
   curl_args=(-fsSL -o "${tmp}")
   [[ -n "${GITHUB_TOKEN:-}" ]] && curl_args+=(-H "Authorization: token ${GITHUB_TOKEN}")
   if ! curl "${curl_args[@]}" "${url}" 2>/dev/null; then
@@ -194,13 +198,13 @@ blocklist_reason() {
 # ── core bump function ─────────────────────────────────────────────────────
 
 bump_package() {
-  local pkg="$1"
+  local pkg="$1" _report="${2:-${REPORT_FILE}}"
 
   local f
   f=$(find "${REPO_ROOT}/packages" -wholename "*/${pkg}/package.mk" 2>/dev/null | head -1)
   if [[ -z "${f}" ]]; then
     warn "${pkg}: package.mk not found"
-    printf "%-40s %s\n" "${pkg}" "NOT_FOUND" >> "${REPORT_FILE}"
+    printf "%-40s %s\n" "${pkg}" "NOT_FOUND" >> "${_report}"
     return
   fi
 
@@ -232,7 +236,7 @@ bump_package() {
 
   if [[ -z "${PKG_VERSION}" ]]; then
     warn "${pkg}: cannot parse PKG_VERSION from ${f}"
-    printf "%-40s %s\n" "${pkg}" "PARSE_ERROR" >> "${REPORT_FILE}"
+    printf "%-40s %s\n" "${pkg}" "PARSE_ERROR" >> "${_report}"
     return
   fi
 
@@ -257,12 +261,12 @@ bump_package() {
     new_version=$(latest_semver_tag "${git_remote}")
     if [[ -z "${new_version}" ]]; then
       warn "${pkg}: cannot fetch tags from ${git_remote}"
-      printf "%-40s %s\n" "${pkg}" "FETCH_ERROR" >> "${REPORT_FILE}"
+      printf "%-40s %s\n" "${pkg}" "FETCH_ERROR" >> "${_report}"
       return
     fi
     if [[ "${new_version}" == "${PKG_VERSION}" ]]; then
       skip "${pkg}: up to date (${PKG_VERSION})"
-      printf "%-40s %s\n" "${pkg}" "UP_TO_DATE" >> "${REPORT_FILE}"
+      printf "%-40s %s\n" "${pkg}" "UP_TO_DATE" >> "${_report}"
       return
     fi
     log "${pkg}: ${PKG_VERSION} → ${new_version}"
@@ -275,21 +279,21 @@ bump_package() {
     new_sha256=$(download_sha256 "${new_url}")
     if [[ -z "${new_sha256}" ]]; then
       warn "${pkg}: archive download failed"
-      printf "%-40s %s\n" "${pkg}" "DOWNLOAD_ERROR" >> "${REPORT_FILE}"
+      printf "%-40s %s\n" "${pkg}" "DOWNLOAD_ERROR" >> "${_report}"
       return
     fi
     if $DRY_RUN; then
       printf "%-40s WOULD_UPDATE (semver)  %s → %s  sha=%s...\n" \
-        "${pkg}" "${PKG_VERSION}" "${new_version}" "${new_sha256:0:16}" >> "${REPORT_FILE}"
+        "${pkg}" "${PKG_VERSION}" "${new_version}" "${new_sha256:0:16}" >> "${_report}"
       return
     fi
-    sedi "s/PKG_VERSION=\"${PKG_VERSION}\"/PKG_VERSION=\"${new_version}\"/" "${f}"
+    sedi "s/PKG_VERSION=\"${PKG_VERSION//./\\.}\"/PKG_VERSION=\"${new_version}\"/" "${f}"
     if grep -q "^PKG_SHA256=" "${f}"; then
       sedi "s/^PKG_SHA256=\"[^\"]*\"/PKG_SHA256=\"${new_sha256}\"/" "${f}"
     fi
     ok "${pkg}: updated (semver) ${PKG_VERSION} → ${new_version}"
     printf "%-40s UPDATED (semver)       %s → %s\n" \
-      "${pkg}" "${PKG_VERSION}" "${new_version}" >> "${REPORT_FILE}"
+      "${pkg}" "${PKG_VERSION}" "${new_version}" >> "${_report}"
     return
   fi
 
@@ -298,13 +302,13 @@ bump_package() {
   new_hash=$(latest_hash "${git_remote}" "${branch}")
   if [[ -z "${new_hash}" ]]; then
     warn "${pkg}: cannot reach ${git_remote} (branch: ${branch:-HEAD})"
-    printf "%-40s %s\n" "${pkg}" "FETCH_ERROR" >> "${REPORT_FILE}"
+    printf "%-40s %s\n" "${pkg}" "FETCH_ERROR" >> "${_report}"
     return
   fi
 
   if [[ "${new_hash}" == "${PKG_VERSION}" ]]; then
     skip "${pkg}: up to date (${PKG_VERSION:0:10}...)"
-    printf "%-40s %s\n" "${pkg}" "UP_TO_DATE" >> "${REPORT_FILE}"
+    printf "%-40s %s\n" "${pkg}" "UP_TO_DATE" >> "${_report}"
     return
   fi
 
@@ -314,16 +318,16 @@ bump_package() {
   if [[ "${PKG_URL}" =~ \.git$ ]]; then
     if $DRY_RUN; then
       printf "%-40s WOULD_UPDATE (git)     %s → %s\n" \
-        "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" >> "${REPORT_FILE}"
+        "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" >> "${_report}"
       return
     fi
-    sedi "s/PKG_VERSION=\"${PKG_VERSION}\"/PKG_VERSION=\"${new_hash}\"/" "${f}"
+    sedi "s/PKG_VERSION=\"${PKG_VERSION//./\\.}\"/PKG_VERSION=\"${new_hash}\"/" "${f}"
     if grep -q "^PKG_SHA256=" "${f}"; then
       sedi "/^PKG_SHA256=/d" "${f}"
     fi
     ok "${pkg}: updated (git clone)"
     printf "%-40s UPDATED (git)          %s → %s\n" \
-      "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" >> "${REPORT_FILE}"
+      "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" >> "${_report}"
     return
   fi
 
@@ -335,24 +339,24 @@ bump_package() {
   new_sha256=$(download_sha256 "${new_url}")
   if [[ -z "${new_sha256}" ]]; then
     warn "${pkg}: archive download failed — skipping SHA256 update"
-    printf "%-40s %s\n" "${pkg}" "DOWNLOAD_ERROR" >> "${REPORT_FILE}"
+    printf "%-40s %s\n" "${pkg}" "DOWNLOAD_ERROR" >> "${_report}"
     return
   fi
 
   if $DRY_RUN; then
     printf "%-40s WOULD_UPDATE (archive) %s → %s  sha=%s...\n" \
-      "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" "${new_sha256:0:16}" >> "${REPORT_FILE}"
+      "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" "${new_sha256:0:16}" >> "${_report}"
     return
   fi
 
-  sedi "s/PKG_VERSION=\"${PKG_VERSION}\"/PKG_VERSION=\"${new_hash}\"/" "${f}"
+  sedi "s/PKG_VERSION=\"${PKG_VERSION//./\\.}\"/PKG_VERSION=\"${new_hash}\"/" "${f}"
   if grep -q "^PKG_SHA256=" "${f}"; then
     sedi "s/^PKG_SHA256=\"[^\"]*\"/PKG_SHA256=\"${new_sha256}\"/" "${f}"
   fi
 
   ok "${pkg}: updated (archive) sha=${new_sha256:0:16}..."
   printf "%-40s UPDATED (archive)      %s → %s\n" \
-    "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" >> "${REPORT_FILE}"
+    "${pkg}" "${PKG_VERSION:0:10}" "${new_hash:0:10}" >> "${_report}"
 }
 
 # ── main ───────────────────────────────────────────────────────────────────
@@ -370,10 +374,12 @@ if $DRY_RUN; then echo "    [DRY RUN — files will not be modified]"; fi
 echo ""
 
 if [[ "${JOBS}" -gt 1 ]]; then
-  declare -a _pids=()
+  declare -a _pids=() _tmps=()
   _failed=0
   for pkg in "${PACKAGES_ALL[@]}"; do
-    bump_package "${pkg}" &
+    _tmp=$(mktemp "${TMPDIR_BUMP}/report.XXXXXX")
+    _tmps+=("${_tmp}")
+    bump_package "${pkg}" "${_tmp}" &
     _pids+=($!)
     # Drain the pool once it's full
     while [[ ${#_pids[@]} -ge "${JOBS}" ]]; do
@@ -383,6 +389,10 @@ if [[ "${JOBS}" -gt 1 ]]; then
   done
   for pid in "${_pids[@]}"; do
     wait "${pid}" 2>/dev/null || _failed=$(( _failed + 1 ))
+  done
+  # Merge report lines in launch order (avoids interleaved writes from subshells)
+  for _tmp in "${_tmps[@]}"; do
+    cat "${_tmp}" >> "${REPORT_FILE}"
   done
   [[ "${_failed}" -eq 0 ]] || warn "${_failed} package(s) had errors — see report"
 else

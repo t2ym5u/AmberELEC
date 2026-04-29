@@ -1,5 +1,5 @@
 PKG_NAME="libvpx"
-PKG_VERSION="1.11.0"
+PKG_VERSION="1.16.0"
 PKG_LICENSE="BSD"
 PKG_SITE="https://www.webmproject.org"
 PKG_URL="https://github.com/webmproject/libvpx/archive/v${PKG_VERSION}.tar.gz"
