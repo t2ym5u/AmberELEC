@@ -61,3 +61,6 @@ lib32-package/
 
 # bump script report output
 bump_report.log
+
+# local BIOS files (copyrighted)
+/bios/

@@ -98,8 +98,8 @@ docker-%: INTERACTIVE=$(shell [ -t 0 ] && echo "-it")
 # By default pass through anything after `docker-` back into `make`
 docker-%: COMMAND=make $*
 
-# Get .env file ready
-docker-%: $(shell env | grep "=" > .env)
+# Get .env file ready, filtering macOS-specific vars that don't exist in the Linux container
+docker-%: $(shell env | grep -Ev "^(TMPDIR|SHELL)=" | grep "=" > .env && printf "TMPDIR=/tmp\nSHELL=/bin/bash\n" >> .env)
 
 # If the user issues a `make docker-shell` just start up bash as the shell to run commands
 docker-shell: COMMAND=bash
@@ -120,6 +120,14 @@ docker-image-push:
 	$(SUDO) $(DOCKER_CMD) push $(DOCKER_IMAGE)
 
 # Wire up docker to call equivalent make files using % to match and $* to pass the value matched by %
+# A named Docker volume (amberelec-build-$*) is used for the build directory so that all build
+# operations happen on Docker's native ext4 filesystem rather than the sshfs-mounted macOS volume.
+# This avoids mkstemp permission errors, linker failures, and git operation failures on sshfs.
+# BUILD_DIR=/build tells the AmberELEC build system to use this native volume for all build output.
+# The volume persists between runs, enabling incremental/resumable builds.
 docker-%:
-	$(SUDO) $(DOCKER_CMD) run $(PODMAN_ARGS) $(INTERACTIVE) --init --env-file .env --rm --user $(UID):$(GID) $(DEVELOPER_SETTINGS) -v $(PWD):$(DOCKER_WORK_DIR) -v $(HOME)/.cache:$(HOME)/.cache -w $(DOCKER_WORK_DIR) $(DOCKER_IMAGE) $(COMMAND)
+	@$(SUDO) $(DOCKER_CMD) volume inspect amberelec-build-$* >/dev/null 2>&1 || \
+	  ( $(SUDO) $(DOCKER_CMD) volume create amberelec-build-$* >/dev/null && \
+	    $(SUDO) $(DOCKER_CMD) run --rm --user 0:0 -v amberelec-build-$*:/build $(DOCKER_IMAGE) chmod 777 /build )
+	$(SUDO) $(DOCKER_CMD) run $(PODMAN_ARGS) $(INTERACTIVE) --init --env-file .env --rm --user $(UID):$(GID) $(DEVELOPER_SETTINGS) -v $(PWD):$(DOCKER_WORK_DIR) -v $(HOME)/.cache:$(HOME)/.cache -v amberelec-build-$*:/build -w $(DOCKER_WORK_DIR) $(DOCKER_IMAGE) bash -c 'umask 022 && export BUILD_DIR=/build && $(COMMAND)'
 
