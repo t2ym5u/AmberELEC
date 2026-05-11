@@ -2,13 +2,13 @@
 # Copyright (C) 2024-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="RTL8852BU"
-PKG_VERSION="292d7eb" # short hash else build fails: "Argument list too long"
+PKG_VERSION="67b5c68" # short hash else build fails: "Argument list too long"
 PKG_LICENSE="GPL"
-PKG_SITE="https://github.com/morrownr/rtl8852bu-20240418"
+PKG_SITE="https://github.com/morrownr/rtl8852bu-20250826"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain linux"
 PKG_NEED_UNPACK="${LINUX_DEPENDS}"
-PKG_LONGDESC="Realtek RTL8852BU/RTL8832BU Linux 4.4-5.x driver"
+PKG_LONGDESC="Realtek RTL8852BU/RTL8832BU Linux driver"
 PKG_IS_KERNEL_PKG="yes"
 
 pre_make_target() {

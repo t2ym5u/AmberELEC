@@ -2,7 +2,7 @@
 # Copyright (C) 2024-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="RTL8188FU"
-PKG_VERSION="0ede0794073495da694aeb52cdd748c6ba2ff21c"
+PKG_VERSION="7ce43037212aab03a5cfe441992eee04de7f858d"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/kelebek333/rtl8188fu"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

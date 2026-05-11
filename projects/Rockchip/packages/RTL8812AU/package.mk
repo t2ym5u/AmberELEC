@@ -4,7 +4,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="RTL8812AU"
-PKG_VERSION="3e8c73224cede1097c49fcd1ecd2e3e181f4540d"
+PKG_VERSION="1be3d39079264fbc4763548ce9e9a26a5a9742ab"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/morrownr/8812au-20210820"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

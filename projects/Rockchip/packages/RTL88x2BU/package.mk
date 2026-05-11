@@ -4,7 +4,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="RTL88x2BU"
-PKG_VERSION="6e4c5ccfd6607e9f4b1c1befd165ce56e7d6a653"
+PKG_VERSION="fecac340fb117eb979f4bb6d28e29730384c382b"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/morrownr/88x2bu-20210702"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
