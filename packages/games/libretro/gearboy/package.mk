@@ -15,8 +15,8 @@
 ################################################################################
 
 PKG_NAME="gearboy"
-PKG_VERSION="c6649f7c687dcc73f3a2a10cde7479c7f31ade65"
-PKG_SHA256="90d6cfbc0c9603a597dcdb98d8844200a03a3dbeace5df0769f4dfb6b14a210a"
+PKG_VERSION="d2edb3469f367dabb40217f05caaf598a0177499"
+PKG_SHA256="b32b6ddddced462bcf52b557430c6704b63f9de6c8f549ad3394f13d9a1180e9"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/drhelius/Gearboy"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
