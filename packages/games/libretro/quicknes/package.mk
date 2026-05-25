@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="quicknes"
-PKG_VERSION="7848e1ac22b1c69d056ae4cb57710651ff1dd169"
-PKG_SHA256="63e596b0b0e25c4cc269d89815d7ea5c7fb6fce2942942253c7c83c7b8b3305f"
+PKG_VERSION="a0ec494c417f365c578f3dacadb04383e4a99ade"
+PKG_SHA256="74d8e6b9cdde672dfa301ce0b733f8bcfd23fba035c2ea7e8bad4cfef3345a65"
 PKG_LICENSE="LGPLv2.1+"
 PKG_SITE="https://github.com/libretro/QuickNES_Core"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
