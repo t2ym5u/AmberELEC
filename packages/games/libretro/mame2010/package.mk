@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="mame2010"
-PKG_VERSION="cc63285e2109263da4eca0911ba07aec60b8109b"
-PKG_SHA256="468b8b3bb35270953283b74eb915ecbaa7630f3ec8935e9f9d1efcaf0a6581cc"
+PKG_VERSION="4679ae591ce39f3c0af492acd4a5b7319e9c2be5"
+PKG_SHA256="2b12fd85f34452e02f9681f03c4bc996db43ea2da8aeb30ffe7b163c012c84f8"
 PKG_LICENSE="MAME"
 PKG_SITE="https://github.com/libretro/mame2010-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
