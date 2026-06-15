@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="opera"
-PKG_VERSION="4c4ca6bf741c40715723a8b8dae4b6187ff6ac30"
-PKG_SHA256="1487bc56bfba97f648d54e864e1b138ab929e885b70170b8f1323e0f0ac97b2f"
+PKG_VERSION="8f77c80b39d6f765333f16326d2ad7475c15a054"
+PKG_SHA256="9d64befa6adaab79ba5cf822859753f48259f25a0b0a7975f10a3bdefaaf04e9"
 PKG_LICENSE="LGPL with additional notes"
 PKG_SITE="https://github.com/libretro/opera-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
