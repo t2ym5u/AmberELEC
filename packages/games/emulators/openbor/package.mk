@@ -3,7 +3,7 @@
 # Copyright (C) 2021-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="openbor"
-PKG_VERSION="a1ee56d0acffff2cc30080675e44c78895df2296"
+PKG_VERSION="4ee5896008a65729716e11bd4fdf086045ea31e3"
 PKG_SITE="https://github.com/DCurrent/openbor"
 PKG_URL="${PKG_SITE}.git"
 PKG_DEPENDS_TARGET="toolchain SDL2 libogg libvorbisidec libvpx libpng"
