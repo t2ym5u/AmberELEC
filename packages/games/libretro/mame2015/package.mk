@@ -2,8 +2,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="mame2015"
-PKG_VERSION="b0cd015f4de7a3979374ab70613db65415e99477"
-PKG_SHA256="e33e4dedad01ebeb4149997992e2af62a918a17e2d45e3949ca6f263342358ae"
+PKG_VERSION="283e04b03c121db9be12632d6bad2fc3e8707248"
+PKG_SHA256="8529bb074b1814c6577f928d852f4d443c4cdf1cd2a455c742f9ff2b339f8160"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/mame2015-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

@@ -2,8 +2,8 @@
 # Copyright (C) 2023-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="bsnes"
-PKG_VERSION="d62d219ac22f1ed179738d107d8a4da2c4289845"
-PKG_SHA256="3b0d77497a9eb661987fdf3404994e09c0ebce83c518acec99c9272f6a1d43d0"
+PKG_VERSION="9c1285dda7dd6bb9a9951d37bcee8794ada640e6"
+PKG_SHA256="57a5e583d88c0d6e6572d526e57b058e5d3e47e1ce3dd739eed50862587e6185"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/bsnes-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
