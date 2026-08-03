@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="fbalpha2012"
-PKG_VERSION="95fa35582b1ca7ce68de3313615794c8c9d8d7c0"
-PKG_SHA256="78fe677e7a4a36145dd7985e52f0767e727f1cdeb81a91f4e38027a8d5560d04"
+PKG_VERSION="0ce31536bef3162fe7e69ff5f555334ec4913cef"
+PKG_SHA256="6825b86c65887fc92ba02c07059d8225113bcca7764dab84ce21da18954c33af"
 PKG_LICENSE="Non-commercial"
 PKG_SITE="https://github.com/libretro/fbalpha2012"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

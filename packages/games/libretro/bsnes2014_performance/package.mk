@@ -2,8 +2,8 @@
 # Copyright (C) 2023-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="bsnes2014_performance"
-PKG_VERSION="7ed320dcbebb41bb2853574404a7eb7906374689"
-PKG_SHA256="1fc8da4556ec3df65958928c5215e14a9e9ed8f476a21bc42f74e62d882386c3"
+PKG_VERSION="1a6b3caf187605e53fa9970996bcfa49b8c90ce3"
+PKG_SHA256="ee14b173cd509093edd845de092a36becfe22dde93f50583531be87b282e2258"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/bsnes2014"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

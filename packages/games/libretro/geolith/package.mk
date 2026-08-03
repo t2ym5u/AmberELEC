@@ -2,7 +2,7 @@
 # Copyright (C) 2024-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="geolith"
-PKG_VERSION="39b96aebee7188126a7a5422cd978ac60e0cbb59"
+PKG_VERSION="d0297113924848c60866e980a420d14ca7208d56"
 PKG_LICENSE="BSD-3c"
 PKG_SITE="https://github.com/libretro/geolith-libretro"
 PKG_URL="${PKG_SITE}.git"

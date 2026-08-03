@@ -2,7 +2,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="wasm4"
-PKG_VERSION="bed690f456bfa716ed21d410162c1c6e7c4e9c6c"
+PKG_VERSION="b6dcb6a2718f8c93dec1fd3c84c3cf384eedc326"
 #PKG_ARCH="aarch64"
 PKG_SITE="https://github.com/aduros/wasm4"
 PKG_URL="${PKG_SITE}.git"
