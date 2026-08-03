@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="swanstation"
-PKG_VERSION="0c263202fe29689113c3db63c8cd3fcacfc6ff37"
-PKG_SHA256="76c7694368ae86156134942aeab8db98ef4a5c9bb9a45cec7098abff158e8a99"
+PKG_VERSION="5430a4a53b89fa5827c97b84ada29d23317245bc"
+PKG_SHA256="df747c49b9038499b8d8762cd2662f0b8c128ee3999b74b19979e5ab20dd622d"
 PKG_ARCH="aarch64"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/swanstation"

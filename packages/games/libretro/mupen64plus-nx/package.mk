@@ -2,8 +2,8 @@
 # Copyright (C) 2020-present Fewtarius
 
 PKG_NAME="mupen64plus-nx"
-PKG_VERSION="58b9daf940fb43f09c3984c6a7c730f4b4c24861"
-PKG_SHA256="858e2e5e435ed4543809d65d622efdc0738b8ff9e83185e6cea0725699a03661"
+PKG_VERSION="98c1b0d877542b01314b3b04272282ba223b65b3"
+PKG_SHA256="3843919d459724d8b0d78e4a819b43a7ef1847dd9bae4bb41e0fd5e8bd72567d"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/mupen64plus-libretro-nx"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

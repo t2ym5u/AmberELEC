@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="crocods"
-PKG_VERSION="87bbb3d9007ac537864278c6c3149ae3291873f8"
-PKG_SHA256="ff43a68ee74b36015a19c6083c03b1bca911603f824ed2b316ebdbc1898d8f7a"
+PKG_VERSION="a9c63b29443715ae2add392010fca4eae7f93e67"
+PKG_SHA256="e2d2ce649fa390e277ea7db15d376027b1f69b42c4767c5551e972015c6d2768"
 PKG_LICENSE="MIT"
 PKG_SITE="https://github.com/libretro/libretro-crocods"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

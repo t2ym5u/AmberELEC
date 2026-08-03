@@ -2,8 +2,8 @@
 # Copyright (C) 2023-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="bsnes_mercury_performance"
-PKG_VERSION="ac0b6b1fe5cb9448492f4c6b3d815205eefbd142"
-PKG_SHA256="f3b846b7d1280c3adb34055aaf272deedf0279d4bf3de28eada6d17e7bc1178a"
+PKG_VERSION="d83bf7ab607e09131731b3a81825f986f91c1f84"
+PKG_SHA256="22160e49691903ae7d5ce0cd59ad400f7917b13db11c349f90fc7fb00ea8ec7e"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/bsnes-mercury"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
