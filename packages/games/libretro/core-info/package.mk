@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="core-info"
-PKG_VERSION="bd81a0b73b50449c0862b65bd755d87860925f65"
-PKG_SHA256="bc4d19bbfd5e8af79fea3a12ee72c4c619fa07e769296fb0ca98ff93c86a4a6f"
+PKG_VERSION="5a74858ab2f7a50cebb5a6330895bc38899531c0"
+PKG_SHA256="8fbcbfb2ae5bbeaacafb385db464b1d8778cf6680e567ad8d4a5ff1345e61c86"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/libretro/libretro-core-info"
 PKG_URL="https://github.com/libretro/libretro-core-info/archive/${PKG_VERSION}.tar.gz"
