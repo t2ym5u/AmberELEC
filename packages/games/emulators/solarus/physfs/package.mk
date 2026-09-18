@@ -2,7 +2,7 @@
 # Copyright (C) 2020-present Shanti Gilbert (https://github.com/shantigilbert)
 
 PKG_NAME="physfs"
-PKG_VERSION="cfd3f4e6ca70b2c080a68f5e8a7427369ea2553b"
+PKG_VERSION="ccffd00e1202a4fbd655f7c84171eee6182d9a53"
 PKG_LICENSE="OSS"
 PKG_SITE="https://github.com/icculus/physfs"
 PKG_URL="${PKG_SITE}.git"
