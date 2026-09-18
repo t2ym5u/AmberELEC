@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="snes9x2002"
-PKG_VERSION="39e0d8c6daf4b1b1302eeecfee8309570aeb6a82"
-PKG_SHA256="7d12e1e01386307696f7d72ca857c8c342f89d0a550a2b7e420c649a3a7770cf"
+PKG_VERSION="24b34890cfc17e7113d8d2235848371c0cd96f50"
+PKG_SHA256="7486439d6bf383fc8887ba0cb63e315da06783a33b11718b88332c0e244faf03"
 PKG_LICENSE="Non-commercial"
 PKG_SITE="https://github.com/libretro/snes9x2002"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

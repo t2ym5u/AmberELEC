@@ -2,7 +2,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="duckstation"
-PKG_VERSION="a4904ddb08673accc7d846c964aed60368768fa8"
+PKG_VERSION="04f821c0443e6ff9bb79908671c5ec162d29acc8"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/stenzek/duckstation"
 PKG_URL="${PKG_SITE}.git"

@@ -2,7 +2,7 @@
 # Copyright (C) 2019-present asakous (https://github.com/asakous)
 
 PKG_NAME="quasi88"
-PKG_VERSION="520e0a37ac0e9cf8b0536fe83fda3aacc9ba73bb"
+PKG_VERSION="459bbc6e90caa3dc392ae8e64a9b0881b1e5ef77"
 PKG_LICENSE="BSD3"
 PKG_SITE="https://github.com/libretro/quasi88-libretro"
 PKG_URL="${PKG_SITE}.git"

@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="fbalpha2019"
-PKG_VERSION="0581797db6fdffd826086b053ced4b6b29bb6678"
-PKG_SHA256="96812000a349e413d63bc5ef04ab7a330bb0b4194047c048ed6ec549b8274936"
+PKG_VERSION="b25b724ba2046f00f6615a6ffd4eed85a7e367a0"
+PKG_SHA256="eaaf170e2b4dcaf8c1b71721774ccfc9d45b0188f1d171024e1cd057206fbbcd"
 PKG_LICENSE="Non-commercial"
 PKG_SITE="https://github.com/libretro/fbalpha"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

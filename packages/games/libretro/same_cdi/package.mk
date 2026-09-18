@@ -2,7 +2,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="same_cdi"
-PKG_VERSION="2184aa6d87a31fb6c64534b9b7b2d26e36bae757"
+PKG_VERSION="9a589f6ba8c35f5310853f63420d9dab1df63492"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/libretro/same_cdi"
 PKG_URL="${PKG_SITE}.git"

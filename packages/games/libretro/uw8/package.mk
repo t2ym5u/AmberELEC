@@ -2,7 +2,7 @@
 # Copyright (C) 2023-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="uw8"
-PKG_VERSION="92e0f7a7678de9955002ecce8501eb1be5e46d35"
+PKG_VERSION="1a64f4bde9662cb3dc04214d2b9f8ead19c85f0a"
 PKG_SITE="https://github.com/libretro/uw8-libretro"
 PKG_URL="${PKG_SITE}.git"
 PKG_DEPENDS_TARGET="toolchain"

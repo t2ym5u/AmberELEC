@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="mgba"
-PKG_VERSION="6dce57eef127dc4cc292644f38196e0e7c58590c"
-PKG_SHA256="2195b204a7949551ef6ad935497566dc80960bae58fd803183b84ddeca77e5c9"
+PKG_VERSION="7a12d6d4b9acb14c0ae62c9166b6a2f3d08007f6"
+PKG_SHA256="5cbf639e527fb586bf33e14d59037eab35f78f45154e0b79c784fff474c3bc37"
 PKG_LICENSE="MPLv2.0"
 PKG_SITE="https://github.com/libretro/mgba"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
