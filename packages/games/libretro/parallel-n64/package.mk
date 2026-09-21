@@ -3,8 +3,8 @@
 # Copyright (C) 2021-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="parallel-n64"
-PKG_VERSION="2f3bf60dcd969ae13e60731eab681504256272db"
-PKG_SHA256="1df16ec76ba035df12a089bcccecaa64c332b84393ab1795a8a1d72b58a4d48e"
+PKG_VERSION="6e4c44c51885c8dc16e46d68464c517e6fca6712"
+PKG_SHA256="ca44cdd84961f543ba1977b7b033e29398793a6f730298ba9f27ccb993ad4117"
 PKG_REV="2"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/parallel-n64"
