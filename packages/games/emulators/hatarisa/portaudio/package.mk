@@ -2,10 +2,10 @@
 # Copyright (C) 2018-present 5schatten (https://github.com/5schatten)
 
 PKG_NAME="portaudio"
-PKG_VERSION="64d1bf913433d7a2835526b80a93487d5038cb8e"
-PKG_SHA256="c33e48217a844cca3b66ab88571b90beefb8fcb6967177951d4dc283587bf834"
+PKG_VERSION="19.7.0"
+PKG_SHA256="5af29ba58bbdbb7bbcefaaecc77ec8fc413f0db6f4c4e286c40c3e1b83174fa0"
 PKG_LICENSE="GPL"
 PKG_SITE="https://portaudio.com"
-PKG_URL="https://github.com/zhang-ray/portaudio/archive/${PKG_VERSION}.tar.gz"
+PKG_URL="https://github.com/PortAudio/portaudio/archive/refs/tags/v${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain alsa-lib"
 PKG_LONGDESC="PortAudio is a free, cross-platform, open-source, audio I/O library."
