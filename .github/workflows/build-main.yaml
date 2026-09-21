@@ -3,6 +3,17 @@ on:
   repository_dispatch:
     types: [release-beta, release-prerelease, release-draft, release-dev]
   workflow_dispatch:
+    inputs:
+      device:
+        description: 'Device to build'
+        type: choice
+        default: all
+        options:
+          - all
+          - RG351P
+          - RG351V
+          - RG351MP
+          - RG552
   push:
     paths-ignore:
       - '.github/**'
@@ -19,16 +30,27 @@ concurrency:
   group: main
 
 env:
-  # This is used by 'make docker-*' commands to determine image to build with
-  DOCKER_IMAGE: ghcr.io/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}-build:latest
+  # This is used by 'make docker-*' commands to determine image to build with.
+  # This fork publishes no build image of its own and its Dockerfile trails
+  # upstream (missing bison, flex, linux-libc-dev-arm64-cross and the gcc-10
+  # pin), so build with the upstream image - the same one a local
+  # `make docker-<device>` pulls by default.
+  DOCKER_IMAGE: ghcr.io/amberelec/amberelec-build:latest
 
 jobs:
+  # Resolves the branch/version once so that every device job stamps the same
+  # value. On GitHub-hosted runners each job gets a clean VM, so nothing can be
+  # passed between jobs except outputs and artifacts.
   build-init:
-    timeout-minutes: 60
-    runs-on: main
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.branch.outputs.branch }}
+      version: ${{ steps.version.outputs.version }}
+      date: ${{ steps.date.outputs.date }}
+      sha: ${{ steps.sha.outputs.sha }}
+      devices: ${{ steps.devices.outputs.devices }}
     steps:
-      #- uses: hmarr/debug-action@v2
-      #  name: debug
       - name: Get current branch as it may not be 'default branch'
         id: branch
         run: |
@@ -40,138 +62,67 @@ jobs:
       - uses: actions/checkout@v4
         name: Checkout
         with:
-          clean: false
           ref: "${{ steps.branch.outputs.branch }}"
+      - name: Get date for artifacts
+        id: date
+        run: echo "date=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT
+      - name: Get short SHA for artifacts
+        id: sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Get dev (or draft release) version
+        id: version
+        run: |
+           set -e
+           echo "full name: ${{ github.event.repository.full_name }}"
+           if [[ "${{ github.event.client_payload.release_tag }}" != "" ]]; then
+               echo "version=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
+           else
+               echo "version=dev-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
+           fi
+      - name: Decide which devices to build
+        id: devices
+        run: |
+           set -e
+           device_arg="${{ github.event.inputs.device }}"
+           if [[ -n "$device_arg" && "$device_arg" != "all" ]]; then
+               echo "devices=[\"$device_arg\"]" >> $GITHUB_OUTPUT
+           else
+               echo 'devices=["RG351P","RG351V","RG351MP","RG552"]' >> $GITHUB_OUTPUT
+           fi
 
-  build-rg351p:
+  # One clean VM per device, so the devices build in parallel rather than
+  # chained. Each job hands its output to build-finalize as an artifact.
+  build:
     needs: [build-init]
     timeout-minutes: 360
-    runs-on: main
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ${{ fromJSON(needs.build-init.outputs.devices) }}
     steps:
-      - name: Get date for artifacts
-        id: date
-        run: echo "date=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT
-      - name: Get short SHA for artifacts
-        id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get dev (or draft release) version
-        id: version
-        run: |
-           set -e
-           echo "full name: ${{ github.event.repository.full_name }}"
-           if [[ "${{ github.event.client_payload.release_tag }}" != "" ]]; then
-               echo "version=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
-           else
-               echo "version=dev-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
-           fi
-      - name: Build RG351P
+      - uses: actions/checkout@v4
+        name: Checkout
+        with:
+          ref: "${{ needs.build-init.outputs.branch }}"
+      # A hosted runner ships ~14G free on '/', far short of what a distro
+      # build needs. Dropping the preinstalled SDKs we never use frees ~30G.
+      - name: Free up disk space
         run: |
             set -e
-            export CUSTOM_VERSION="${{ steps.version.outputs.version }}"
-            make DOCKER_WORK_DIR=/work docker-RG351P
-
-  build-rg351v:
-    needs: [build-init, build-rg351p]
-    timeout-minutes: 360
-    runs-on: main
-    steps:
-      - name: Get date for artifacts
-        id: date
-        run: echo "date=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT
-      - name: Get short SHA for artifacts
-        id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get dev (or draft release) version
-        id: version
-        run: |
-           set -e
-           echo "full name: ${{ github.event.repository.full_name }}"
-           if [[ "${{ github.event.client_payload.release_tag }}" != "" ]]; then
-               echo "version=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
-           else
-               echo "version=dev-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
-           fi
-      - name: Build RG351V
+            df -h /
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                        /usr/local/share/boost /usr/local/lib/node_modules \
+                        "$AGENT_TOOLSDIRECTORY"
+            sudo apt-get clean
+            df -h /
+      - name: Build ${{ matrix.device }}
         run: |
             set -e
-            export CUSTOM_VERSION="${{ steps.version.outputs.version }}"
-            make DOCKER_WORK_DIR=/work docker-RG351V
-
-  build-rg351mp:
-    needs: [build-init, build-rg351p, build-rg351v]
-    timeout-minutes: 360
-    runs-on: main
-    steps:
-      - name: Get date for artifacts
-        id: date
-        run: echo "date=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT
-      - name: Get short SHA for artifacts
-        id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get dev (or draft release) version
-        id: version
-        run: |
-           set -e
-           echo "full name: ${{ github.event.repository.full_name }}"
-           if [[ "${{ github.event.client_payload.release_tag }}" != "" ]]; then
-               echo "version=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
-           else
-               echo "version=dev-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
-           fi
-      - name: Build RG351MP
-        run: |
-            set -e
-            export CUSTOM_VERSION="${{ steps.version.outputs.version }}"
-            make DOCKER_WORK_DIR=/work docker-RG351MP
-
-  build-rg552:
-    needs: [build-init, build-rg351p, build-rg351v, build-rg351mp]
-    timeout-minutes: 360
-    runs-on: main
-    steps:
-      - name: Get date for artifacts
-        id: date
-        run: echo "date=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT
-      - name: Get short SHA for artifacts
-        id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get dev (or draft release) version
-        id: version
-        run: |
-           set -e
-           echo "full name: ${{ github.event.repository.full_name }}"
-           if [[ "${{ github.event.client_payload.release_tag }}" != "" ]]; then
-               echo "version=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
-           else
-               echo "version=dev-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
-           fi
-      - name: Build RG552
-        run: |
-            set -e
-            export CUSTOM_VERSION="${{ steps.version.outputs.version }}"
-            make DOCKER_WORK_DIR=/work docker-RG552
-
-  build-finalize:
-    needs: [build-init, build-rg351p, build-rg351v, build-rg351mp, build-rg552]
-    timeout-minutes: 360
-    runs-on: main
-    steps:
-      - name: Get date for artifacts
-        id: date
-        run: echo "date=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT
-      - name: Get short SHA for artifacts
-        id: sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get dev (or draft release) version
-        id: version
-        run: |
-           set -e
-           echo "full name: ${{ github.event.repository.full_name }}"
-           if [[ "${{ github.event.client_payload.release_tag }}" != "" ]]; then
-               echo "version=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
-           else
-               echo "version=dev-${{ steps.date.outputs.date }}-${{ steps.sha.outputs.sha }}" >> $GITHUB_OUTPUT
-           fi
+            export CUSTOM_VERSION="${{ needs.build-init.outputs.version }}"
+            make DOCKER_WORK_DIR=/work docker-${{ matrix.device }}
+      # Trim before upload: these never ship and would otherwise be copied
+      # through the artifact store twice.
       - name: Cleanup system artifacts
         run: |
             set -e
@@ -183,39 +134,57 @@ jobs:
             set -e
             #main builds only include the .tar for speed
             rm -rf release/aarch64/RG*/*.img.gz*
+      - name: Pass ${{ matrix.device }} build to build-finalize
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.device }}
+          path: release/aarch64/${{ matrix.device }}/
+          retention-days: 1
+
+  build-finalize:
+    needs: [build-init, build]
+    timeout-minutes: 360
+    runs-on: ubuntu-latest
+    steps:
+      # Restores release/aarch64/<DEVICE>/ exactly as the build jobs left it.
+      - name: Collect device builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: RG*
+          path: release/aarch64
       - name: Archive RG351V (${{github.sha}})
         uses: actions/upload-artifact@v4
         if: github.event.client_payload.release_tag == ''
         with:
-          name: RG351V-dev-main-${{ steps.date.outputs.date }}-${{steps.sha.outputs.sha}}
+          name: RG351V-dev-main-${{ needs.build-init.outputs.date }}-${{ needs.build-init.outputs.sha }}
           path: |
             release/aarch64/RG351V/
       - name: Archive RG351P (${{github.sha}})
         if: github.event.client_payload.release_tag == ''
         uses: actions/upload-artifact@v4
         with:
-          name: RG351P-dev-main-${{ steps.date.outputs.date }}-${{steps.sha.outputs.sha}}
+          name: RG351P-dev-main-${{ needs.build-init.outputs.date }}-${{ needs.build-init.outputs.sha }}
           path: |
             release/aarch64/RG351P/
       - name: Archive RG351MP (${{github.sha}})
         if: github.event.client_payload.release_tag == ''
         uses: actions/upload-artifact@v4
         with:
-          name: RG351MP-dev-main-${{ steps.date.outputs.date }}-${{steps.sha.outputs.sha}}
+          name: RG351MP-dev-main-${{ needs.build-init.outputs.date }}-${{ needs.build-init.outputs.sha }}
           path: |
             release/aarch64/RG351MP/
       - name: Archive RG552 (${{github.sha}})
         if: github.event.client_payload.release_tag == ''
         uses: actions/upload-artifact@v4
         with:
-          name: RG552-dev-main-${{ steps.date.outputs.date }}-${{steps.sha.outputs.sha}}
+          name: RG552-dev-main-${{ needs.build-init.outputs.date }}-${{ needs.build-init.outputs.sha }}
           path: |
             release/aarch64/RG552/
       - name: Create pre-release as draft at first to hide during uploads
         if: github.event.action == 'release-prerelease'
         uses: ncipollo/release-action@v1.13.0
         with:
-          tag: "${{ steps.version.outputs.version }}"
+          tag: "${{ needs.build-init.outputs.version }}"
           body: |
             # Release Notes (Prerelease)
             This is a prerelease based on the commit: ${{ github.event.repository.full_name }}@${{github.sha}}.
@@ -248,28 +217,28 @@ jobs:
                 <td>RK3399</td>
                 <td>Anbernic</td>
                 <td>RG552</td>
-                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG552.aarch64-${{ steps.version.outputs.version }}.img.gz">Link</a></td>
-                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG552.aarch64-${{ steps.version.outputs.version }}.tar">Link</a></td>
+                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG552.aarch64-${{ needs.build-init.outputs.version }}.img.gz">Link</a></td>
+                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG552.aarch64-${{ needs.build-init.outputs.version }}.tar">Link</a></td>
               </tr>
               <tr>
                 <td rowspan="10">RK3326</td>
                 <td rowspan="4">Anbernic</td>
                 <td>RG351P</td>
-                <td rowspan="2" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351P.aarch64-${{ steps.version.outputs.version }}.img.gz">Link</a></td>
-                <td rowspan="2" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351P.aarch64-${{ steps.version.outputs.version }}.tar">Link</a></td>
+                <td rowspan="2" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351P.aarch64-${{ needs.build-init.outputs.version }}.img.gz">Link</a></td>
+                <td rowspan="2" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351P.aarch64-${{ needs.build-init.outputs.version }}.tar">Link</a></td>
               </tr>
               <tr>
                 <td>RG351M</td>
               </tr>
               <tr>
                 <td>RG351V</td>
-                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351V.aarch64-${{ steps.version.outputs.version }}.img.gz">Link</a></td>
-                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351V.aarch64-${{ steps.version.outputs.version }}.tar">Link</a></td>
+                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351V.aarch64-${{ needs.build-init.outputs.version }}.img.gz">Link</a></td>
+                <td align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351V.aarch64-${{ needs.build-init.outputs.version }}.tar">Link</a></td>
               </tr>
               <tr>
                 <td>RG351MP</td>
-                <td rowspan="7" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ steps.version.outputs.version }}.img.gz">Link</a></td>
-                <td rowspan="7" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ steps.version.outputs.version }}.tar">Link</a></td>
+                <td rowspan="7" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ needs.build-init.outputs.version }}.img.gz">Link</a></td>
+                <td rowspan="7" align="center"><a href="https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ needs.build-init.outputs.version }}.tar">Link</a></td>
               </tr>
               <tr>
                 <td rowspan="2">PowKiddy</td>
@@ -301,7 +270,7 @@ jobs:
         if: github.event.action == 'release-prerelease'
         uses: ncipollo/release-action@v1.13.0
         with:
-          tag: "${{ steps.version.outputs.version }}"
+          tag: "${{ needs.build-init.outputs.version }}"
           allowUpdates: true
           draft: false
           prerelease: true
@@ -313,7 +282,7 @@ jobs:
         if: github.event.action == 'release-dev'
         uses: ncipollo/release-action@v1.13.0
         with:
-          tag: "${{ steps.version.outputs.version }}"
+          tag: "${{ needs.build-init.outputs.version }}"
           body: |
             # Release Notes (Dev - Unsupported)
             This is an **unsupported dev release** based on the commit: ${{ github.event.repository.full_name }}@${{github.sha}}.
@@ -339,7 +308,7 @@ jobs:
         if: github.event.action == 'release-dev'
         uses: ncipollo/release-action@v1.13.0
         with:
-          tag: "${{ steps.version.outputs.version }}"
+          tag: "${{ needs.build-init.outputs.version }}"
           allowUpdates: true
           draft: false
           prerelease: true
@@ -354,7 +323,7 @@ jobs:
         if: github.event.action == 'release-beta'
         uses: ncipollo/release-action@v1.13.0
         with:
-          tag: "${{ steps.version.outputs.version }}"
+          tag: "${{ needs.build-init.outputs.version }}"
           body: |
             # Release Notes (Beta)
             This beta is provided as a OTA bridge to the new pre-releases
@@ -365,8 +334,8 @@ jobs:
              **IMPORTANT NOTE**: There are **three different images** below, one for the **RG351P/M**, **RG351V** and **RG351MP**!
 
             **If you download the incorrect image for your device, it will not boot!**  If you are unsure, use the the following links:
-            **New Installations** (`.img.gz`):  **[RG351P/M](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351P.aarch64-${{ steps.version.outputs.version }}.img.gz)** |  **[RG351V](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351V.aarch64-${{ steps.version.outputs.version }}.img.gz)** |  **[RG351MP](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ steps.version.outputs.version }}.img.gz)**
-            **Upgrades** (place in `/storage/roms/update`): **[RG351P/M](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351P.aarch64-${{ steps.version.outputs.version }}.tar)** |  **[RG351V](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351V.aarch64-${{ steps.version.outputs.version }}.tar)** |  **[RG351MP](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ steps.version.outputs.version }}.tar)**
+            **New Installations** (`.img.gz`):  **[RG351P/M](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351P.aarch64-${{ needs.build-init.outputs.version }}.img.gz)** |  **[RG351V](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351V.aarch64-${{ needs.build-init.outputs.version }}.img.gz)** |  **[RG351MP](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ needs.build-init.outputs.version }}.img.gz)**
+            **Upgrades** (place in `/storage/roms/update`): **[RG351P/M](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351P.aarch64-${{ needs.build-init.outputs.version }}.tar)** |  **[RG351V](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351V.aarch64-${{ needs.build-init.outputs.version }}.tar)** |  **[RG351MP](https://github.com/${{ github.event.repository.owner.login }}/AmberELEC-prerelease/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ needs.build-init.outputs.version }}.tar)**
 
           artifacts: "release/aarch64/RG351P/*, release/aarch64/RG351V/*, release/aarch64/RG351MP/*, release/aarch64/RG552/*"
           prerelease: true
@@ -377,7 +346,7 @@ jobs:
         if: github.event.action == 'release-beta'
         uses: ncipollo/release-action@v1.13.0
         with:
-          tag: "${{ steps.version.outputs.version }}"
+          tag: "${{ needs.build-init.outputs.version }}"
           allowUpdates: true
           draft: false
           prerelease: true
@@ -389,11 +358,11 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: github.event.action == 'release-draft'
         with:
-          tag_name: "${{ steps.version.outputs.version }}"
-          name: "AmberELEC - ${{ steps.version.outputs.version }} - ${{ github.event.client_payload.release_name }}"
+          tag_name: "${{ needs.build-init.outputs.version }}"
+          name: "AmberELEC - ${{ needs.build-init.outputs.version }} - ${{ github.event.client_payload.release_name }}"
           body: |
             # Release Notes
-            Welcome to the ${{ github.event.client_payload.release_name}} (${{ steps.version.outputs.version }}) release.
+            Welcome to the ${{ github.event.client_payload.release_name}} (${{ needs.build-init.outputs.version }}) release.
 
             General:
 
@@ -404,8 +373,8 @@ jobs:
             **IMPORTANT NOTE**: There are **four different images** below, one for the **RG351P/M**, **RG351V**, **RG351MP** and **RG552**!
 
             **If you download the incorrect image for your device, it will not boot!**  If you are unsure, use the the following links:
-            **New Installations** (`.img.gz`):  **[RG351P/M](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351P.aarch64-${{ steps.version.outputs.version }}.img.gz)** |  **[RG351V](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351V.aarch64-${{ steps.version.outputs.version }}.img.gz)** |  **[RG351MP](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ steps.version.outputs.version }}.img.gz)** | **[RG552](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG552.aarch64-${{ steps.version.outputs.version }}.img.gz)**
-            **Upgrades** (place in `/storage/roms/update`): **[RG351P/M](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351P.aarch64-${{ steps.version.outputs.version }}.tar)** |  **[RG351V](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351V.aarch64-${{ steps.version.outputs.version }}.tar)** |  **[RG351MP](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ steps.version.outputs.version }}.tar)** | **[RG552](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ steps.version.outputs.version }}/AmberELEC-RG552.aarch64-${{ steps.version.outputs.version }}.tar)**
+            **New Installations** (`.img.gz`):  **[RG351P/M](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351P.aarch64-${{ needs.build-init.outputs.version }}.img.gz)** |  **[RG351V](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351V.aarch64-${{ needs.build-init.outputs.version }}.img.gz)** |  **[RG351MP](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ needs.build-init.outputs.version }}.img.gz)** | **[RG552](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG552.aarch64-${{ needs.build-init.outputs.version }}.img.gz)**
+            **Upgrades** (place in `/storage/roms/update`): **[RG351P/M](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351P.aarch64-${{ needs.build-init.outputs.version }}.tar)** |  **[RG351V](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351V.aarch64-${{ needs.build-init.outputs.version }}.tar)** |  **[RG351MP](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG351MP.aarch64-${{ needs.build-init.outputs.version }}.tar)** | **[RG552](https://github.com/${{ github.event.repository.full_name }}/releases/download/${{ needs.build-init.outputs.version }}/AmberELEC-RG552.aarch64-${{ needs.build-init.outputs.version }}.tar)**
 
           files: |
             release/aarch64/RG351P/*
