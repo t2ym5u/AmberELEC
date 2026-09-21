@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Checks that every package's source can still be fetched, without downloading
+# payloads. Run it from the repository root.
+#
+# Worth running from a CI runner as well as a workstation: some upstreams
+# (gmplib.org, for one) answer a residential address but refuse cloud ranges,
+# so a source can pass locally and still break the build.
+#
+# scripts/get_archive falls back to the distro mirror when PKG_URL fails, so a
+# package is only really broken when both are unreachable.
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "${ROOT}" || exit 1
+
+JOBS="${JOBS:-10}"
+OUT="${OUT:-$(mktemp)}"
+: > "${OUT}"
+
+# PKG_URL interpolates these; without them the host drops out of the URL and
+# every package looks broken.
+export SOURCEFORGE_SRC="https://prdownloads.sourceforge.net"
+export DISTRO_SRC="https://github.com/AmberELEC/AmberELEC"
+export DISTRO_MIRROR="http://sources.libreelec.tv/mirror"
+
+reachable() {
+  local code
+  code=$(timeout 60 curl -s -o /dev/null -w '%{http_code}' -L --max-redirs 10 -I "$1" 2>/dev/null)
+  [ "${code}" = "200" ] && return 0
+  # some hosts reject HEAD, so ask for a single byte instead
+  code=$(timeout 60 curl -s -o /dev/null -w '%{http_code}' -L --max-redirs 10 -r 0-1 "$1" 2>/dev/null)
+  [ "${code}" = "200" ] || [ "${code}" = "206" ]
+}
+
+# mirrors the PKG_SOURCE_NAME derivation in config/functions
+source_name() {
+  local n="${PKG_URL##*/}"
+  case "${n}" in
+    ${PKG_NAME}-${PKG_VERSION}.*) echo "${n}" ;;
+    *.tar|*.tbz|*.tgz|*.txz|*.7z|*.zip) echo "${PKG_NAME}-${PKG_VERSION}.${n##*.}" ;;
+    *.tar.bz2|*.tar.gz|*.tar.xz) echo "${PKG_NAME}-${PKG_VERSION}.tar.${n##*.}" ;;
+    *.diff|*.patch|*.diff.bz2|*.patch.bz2|patch-*.bz2|*.diff.gz|*.patch.gz|patch-*.gz) echo "${n}" ;;
+    *) echo "${PKG_NAME}-${PKG_VERSION}.${n##*.}" ;;
+  esac
+}
+
+check_one() {
+  local pkgfile="$1" mirror
+  local PKG_NAME PKG_VERSION PKG_MAJOR PKG_SITE PKG_URL
+  PKG_NAME=""; PKG_VERSION=""; PKG_MAJOR=""; PKG_SITE=""; PKG_URL=""
+  # plain assignments only - lines calling out to the build system cannot be
+  # evaluated standalone
+  eval "$(grep -E '^(PKG_NAME|PKG_VERSION|PKG_MAJOR|PKG_SITE|PKG_URL)=' "${pkgfile}" 2>/dev/null | grep -v '\$(')" 2>/dev/null
+  [ -z "${PKG_URL}" ] && return
+
+  case "${PKG_URL}" in
+    *'$'*) echo "SKIP   unresolved ${PKG_NAME}  ${PKG_URL}" >> "${OUT}"; return ;;
+    file://*) return ;;
+    git://*|*.git)
+      if timeout 60 git ls-remote --exit-code "${PKG_URL}" HEAD >/dev/null 2>&1; then
+        echo "OK     git        ${PKG_NAME}" >> "${OUT}"
+      else
+        echo "BROKEN git        ${PKG_NAME}  ${PKG_URL}" >> "${OUT}"
+      fi
+      return ;;
+    http://*|https://*|ftp://*) : ;;
+    *) echo "SKIP   nohost     ${PKG_NAME}  ${PKG_URL}" >> "${OUT}"; return ;;
+  esac
+
+  if reachable "${PKG_URL}"; then
+    echo "OK     upstream   ${PKG_NAME}" >> "${OUT}"
+    return
+  fi
+  mirror="${DISTRO_MIRROR}/${PKG_NAME}/$(source_name)"
+  if reachable "${mirror}"; then
+    echo "OK     mirror     ${PKG_NAME}  (upstream unreachable, mirror serves it)" >> "${OUT}"
+  else
+    echo "BROKEN both       ${PKG_NAME}  ${PKG_URL}" >> "${OUT}"
+  fi
+}
+export -f check_one reachable source_name
+export OUT
+
+find packages -name package.mk -not -path "*/addons/*" -print0 \
+  | xargs -0 -P "${JOBS}" -I{} bash -c 'check_one "$@"' _ {}
+
+echo
+echo "reachable upstream: $(grep -c '^OK     upstream' "${OUT}")"
+echo "reachable mirror:   $(grep -c '^OK     mirror' "${OUT}")"
+echo "reachable git:      $(grep -c '^OK     git' "${OUT}")"
+echo "skipped:            $(grep -c '^SKIP' "${OUT}")"
+echo "broken:             $(grep -c '^BROKEN' "${OUT}")"
+
+if grep -q '^SKIP' "${OUT}"; then
+  echo
+  echo "Skipped (could not resolve the URL standalone):"
+  grep '^SKIP' "${OUT}" | sort
+fi
+
+if grep -q '^BROKEN' "${OUT}"; then
+  echo
+  echo "Unreachable from both PKG_URL and the distro mirror:"
+  grep '^BROKEN' "${OUT}" | sort
+  exit 1
+fi
+
+echo
+echo "All package sources are reachable."
