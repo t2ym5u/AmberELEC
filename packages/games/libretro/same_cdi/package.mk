@@ -2,7 +2,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="same_cdi"
-PKG_VERSION="9a589f6ba8c35f5310853f63420d9dab1df63492"
+PKG_VERSION="8a3c2acdbeb57aea4e74aeadaa703fdc5c9c5de9"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/libretro/same_cdi"
 PKG_URL="${PKG_SITE}.git"
@@ -17,7 +17,7 @@ PKG_MAKE_OPTS_TARGET="REGENIE=1 \
                       CROSS_BUILD=1 \
                       TOOLS=0 \
                       RETRO=1 \
-                      PTR64=0 \
+                      PTR64=1 \
                       NOASM=0 \
                       PYTHON_EXECUTABLE=python3 \
                       CONFIG=libretro \
@@ -25,7 +25,6 @@ PKG_MAKE_OPTS_TARGET="REGENIE=1 \
                       LIBRETRO_CPU= \
                       PLATFORM=arm64 \
                       ARCH= \
-                      TARGET=mame \
                       OSD=retro \
                       USE_SYSTEM_LIB_EXPAT=1 \
                       USE_SYSTEM_LIB_ZLIB=1 \
@@ -33,15 +32,30 @@ PKG_MAKE_OPTS_TARGET="REGENIE=1 \
                       USE_SYSTEM_LIB_SQLITE3=1"
 
 pre_configure_target() {
-  sed -i "s/-static-libstdc++//g" scripts/genie.lua
+  sed -i "s/-static-libstdc++//g" scripts/genie.lua 2>/dev/null || true
+  sed -i 's|linkoptions {|linkoptions { "-shared", "-fuse-ld=gold",|g' scripts/genie.lua 2>/dev/null || true
 }
 
 make_target() {
   unset ARCH
   unset DISTRO
   unset PROJECT
-  export ARCHOPTS="-D__aarch64__ -DASMJIT_BUILD_X86"
-  make -f Makefile.libretro ${PKG_MAKE_OPTS_TARGET} OVERRIDE_CC=${CC} OVERRIDE_CXX=${CXX} OVERRIDE_LD=${LD} AR=${AR} ${MAKEFLAGS}
+
+  local my_cc="${CC}"
+  local my_cxx="${CXX}"
+
+  if [ -n "${CCACHE_DIR}" ] && [ -x "${TOOLCHAIN}/bin/ccache" ]; then
+    my_cc="${TOOLCHAIN}/bin/ccache ${CC}"
+    my_cxx="${TOOLCHAIN}/bin/ccache ${CXX}"
+  fi
+
+  make -f Makefile.libretro ${PKG_MAKE_OPTS_TARGET} \
+       OVERRIDE_CC="${my_cc}" \
+       OVERRIDE_CXX="${my_cxx}" \
+       OVERRIDE_LD="${LD}" \
+       AR="${AR}" \
+       LDFLAGS="${LDFLAGS} -shared" \
+       ${MAKEFLAGS}
 }
 
 makeinstall_target() {
