@@ -120,6 +120,13 @@ jobs:
         run: |
             set -e
             export CUSTOM_VERSION="${{ needs.build-init.outputs.version }}"
+            # The container runs as the runner's uid, whose HOME (/home/runner)
+            # does not exist inside it, so setuptools cannot create its default
+            # ~/.python-eggs. MarkupSafe installs as a zipped egg holding a C
+            # extension, which has to be extracted there to be importable -
+            # without it, `import jinja2` fails and systemd's meson reports
+            # jinja2 as missing. Point the cache somewhere writable.
+            export PYTHON_EGG_CACHE=/tmp/python-eggs
             make DOCKER_WORK_DIR=/work docker-${{ matrix.device }}
       # Trim before upload: these never ship and would otherwise be copied
       # through the artifact store twice.
