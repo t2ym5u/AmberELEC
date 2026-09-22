@@ -25,13 +25,26 @@ export SOURCEFORGE_SRC="https://prdownloads.sourceforge.net"
 export DISTRO_SRC="https://github.com/AmberELEC/AmberELEC"
 export DISTRO_MIRROR="http://sources.libreelec.tv/mirror"
 
+# Sets REACHABLE_TYPE to the served content type, so callers can spot a host
+# answering 200 with an error page instead of the archive - zlib.net did
+# exactly that for pigz, and a status-only check called it healthy.
 reachable() {
   local code
-  code=$(timeout 60 curl -s -o /dev/null -w '%{http_code}' -L --max-redirs 10 -I "$1" 2>/dev/null)
+  REACHABLE_TYPE=""
+  code=$(timeout 60 curl -s -o /dev/null -L --max-redirs 10 -I -w '%{http_code} %{content_type}' "$1" 2>/dev/null)
+  REACHABLE_TYPE="${code#* }"; code="${code%% *}"
   [ "${code}" = "200" ] && return 0
   # some hosts reject HEAD, so ask for a single byte instead
-  code=$(timeout 60 curl -s -o /dev/null -w '%{http_code}' -L --max-redirs 10 -r 0-1 "$1" 2>/dev/null)
+  code=$(timeout 60 curl -s -o /dev/null -L --max-redirs 10 -r 0-1 -w '%{http_code} %{content_type}' "$1" 2>/dev/null)
+  REACHABLE_TYPE="${code#* }"; code="${code%% *}"
   [ "${code}" = "200" ] || [ "${code}" = "206" ]
+}
+
+# An archive URL answering with HTML is a placeholder or error page, not the
+# source - it would fail the build's checksum check.
+serves_html() {
+  case "$1" in *.tar|*.tar.*|*.tgz|*.tbz|*.txz|*.zip|*.7z) : ;; *) return 1 ;; esac
+  case "${REACHABLE_TYPE}" in *text/html*) return 0 ;; *) return 1 ;; esac
 }
 
 # mirrors the PKG_SOURCE_NAME derivation in config/functions
@@ -70,7 +83,11 @@ check_one() {
   esac
 
   if reachable "${PKG_URL}"; then
-    echo "OK     upstream   ${PKG_NAME}" >> "${OUT}"
+    if serves_html "${PKG_URL}"; then
+      echo "SUSPECT html       ${PKG_NAME}  serves text/html, not an archive: ${PKG_URL}" >> "${OUT}"
+    else
+      echo "OK     upstream   ${PKG_NAME}" >> "${OUT}"
+    fi
     return
   fi
   mirror="${DISTRO_MIRROR}/${PKG_NAME}/$(source_name)"
@@ -80,7 +97,7 @@ check_one() {
     echo "BROKEN both       ${PKG_NAME}  ${PKG_URL}" >> "${OUT}"
   fi
 }
-export -f check_one reachable source_name
+export -f check_one reachable serves_html source_name
 export OUT
 
 find packages -name package.mk -not -path "*/addons/*" -print0 \
@@ -90,6 +107,7 @@ echo
 echo "reachable upstream: $(grep -c '^OK     upstream' "${OUT}")"
 echo "reachable mirror:   $(grep -c '^OK     mirror' "${OUT}")"
 echo "reachable git:      $(grep -c '^OK     git' "${OUT}")"
+echo "suspect:            $(grep -c '^SUSPECT' "${OUT}")"
 echo "skipped:            $(grep -c '^SKIP' "${OUT}")"
 echo "broken:             $(grep -c '^BROKEN' "${OUT}")"
 
@@ -97,6 +115,13 @@ if grep -q '^SKIP' "${OUT}"; then
   echo
   echo "Skipped (could not resolve the URL standalone):"
   grep '^SKIP' "${OUT}" | sort
+fi
+
+if grep -q '^SUSPECT' "${OUT}"; then
+  echo
+  echo "Answered 200 but served a page rather than an archive (may be a"
+  echo "transient upstream hiccup - recheck before changing anything):"
+  grep '^SUSPECT' "${OUT}" | sort
 fi
 
 if grep -q '^BROKEN' "${OUT}"; then
