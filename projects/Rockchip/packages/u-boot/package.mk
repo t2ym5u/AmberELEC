@@ -17,7 +17,8 @@ PKG_NEED_UNPACK="${PROJECT_DIR}/${PROJECT}/bootloader"
 if [[ "${DEVICE}" =~ RG351 ]]; then
   PKG_VERSION="d8ad98256d4913bf39153a404f5e26e94cfe8b14"
   PKG_GIT_CLONE_SINGLE="yes"
-  PKG_GIT_CLONE_DEPTH="1"
+  # No clone depth: main has moved past this pin, and a depth-1 clone only
+  # fetches the tip, so scripts/get_git cannot find the commit and aborts.
   PKG_URL="https://github.com/AmberELEC/uboot_rg351.git"
 elif [[ "${DEVICE}" =~ RG552 ]]; then
   PKG_VERSION="866ca972d6c3cabeaf6dbac431e8e08bb30b3c8e"
