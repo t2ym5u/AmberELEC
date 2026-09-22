@@ -57,6 +57,11 @@ while [ ${NBWGET} -gt 0 ]; do
     fi
   done
   NBWGET=$((NBWGET - 1))
+  # Back off before trying again. A host that is rate-limiting or briefly
+  # serving an error page in place of the tarball recovers within seconds,
+  # but without a pause all ten attempts are spent in about two of them and
+  # the build fails on a hiccup it could have ridden out.
+  [ ${NBWGET} -gt 0 ] && sleep $(( (11 - NBWGET) * 2 ))
 done
 
 if [ ${NBWGET} -eq 0 ]; then
