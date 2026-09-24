@@ -9,7 +9,7 @@ PKG_SITE="https://github.com/TimOelrichs/doublecherryGB-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain"
 PKG_LONGDESC="libretro gameboy core with up to 16 players support"
-PKG_TOOLCHAIN="make"
+PKG_TOOLCHAIN="cmake"
 
 makeinstall_target() {
   mkdir -p ${INSTALL}/usr/lib/libretro
