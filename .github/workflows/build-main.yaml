@@ -127,6 +127,12 @@ jobs:
             # without it, `import jinja2` fails and systemd's meson reports
             # jinja2 as missing. Point the cache somewhere writable.
             export PYTHON_EGG_CACHE=/tmp/python-eggs
+            # Two parallelism levels multiply: THREADCOUNT packages build at
+            # once (nproc = 4), each with MAKEFLAGS=-j$(nproc) = 4, so up to
+            # ~16 compilers run together and a hosted runner dies with "lost
+            # communication with the server". Build one package at a time and
+            # leave make's -j alone, keeping the cores busy without the burst.
+            export THREADCOUNT=1
             make DOCKER_WORK_DIR=/work docker-${{ matrix.device }}
       # Trim before upload: these never ship and would otherwise be copied
       # through the artifact store twice.
