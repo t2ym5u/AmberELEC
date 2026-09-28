@@ -3,7 +3,7 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="gearsystem"
-PKG_VERSION="0e35ec681bac7850d1518057aac38e4522066e16"
+PKG_VERSION="c7e28d137f5b7d63ee1ff4e4d0d3aaceda7719e0"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/drhelius/Gearsystem"
 PKG_URL="${PKG_SITE}.git"

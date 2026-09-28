@@ -3,7 +3,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="mame"
-PKG_VERSION="eb342748c828421bd15a1791162c885bfde61907"
+PKG_VERSION="9069f39340f2d2b1795df8e71bb1d3d0fbc76598"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/mame"
 PKG_URL="${PKG_SITE}.git"

@@ -2,7 +2,7 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="emuscv"
-PKG_VERSION="769ad162db63884222949f2add2a4b56a6499b25"
+PKG_VERSION="17407117018919545428b753277dabd83630052f"
 PKG_SITE="https://gitlab.com/MaaaX-EPOCH84/libretro-emuscv"
 PKG_URL="${PKG_SITE}.git"
 PKG_DEPENDS_TARGET="toolchain"
