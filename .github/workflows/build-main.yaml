@@ -128,11 +128,15 @@ jobs:
             # jinja2 as missing. Point the cache somewhere writable.
             export PYTHON_EGG_CACHE=/tmp/python-eggs
             # Two parallelism levels multiply: THREADCOUNT packages build at
-            # once (nproc = 4), each with MAKEFLAGS=-j$(nproc) = 4, so up to
-            # ~16 compilers run together and a hosted runner dies with "lost
-            # communication with the server". Build one package at a time and
-            # leave make's -j alone, keeping the cores busy without the burst.
-            export THREADCOUNT=1
+            # once, each with MAKEFLAGS=-j$(nproc) = 4. Left at the nproc
+            # default that is 16 concurrent compilers, and the runner dies with
+            # "lost communication with the server".
+            #
+            # At 1 the runner survives but the job ran 4h19 to reach package
+            # 320/461, which extrapolates past the 6h limit. 2 halves the
+            # concurrency that killed it while roughly halving the wall time -
+            # the memory headroom here is what the next run has to confirm.
+            export THREADCOUNT=2
             make DOCKER_WORK_DIR=/work docker-${{ matrix.device }}
       # Trim before upload: these never ship and would otherwise be copied
       # through the artifact store twice.
