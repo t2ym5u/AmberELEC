@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="fuse-libretro"
-PKG_VERSION="958105a90ad2b5825ad002ba563cc3f9f879d763"
-PKG_SHA256="f0d45556ac6a4b5c969c7fbcba439133315cd926e2dee5fc957bfa62444541d7"
+PKG_VERSION="e997e2bc32c888348f862f69f2c53babfedf7791"
+PKG_SHA256="3b8af49fda13ed29ac6b9b03038a2761e397cc06a004dc499be64d5d3917d4a0"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/fuse-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"

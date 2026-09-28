@@ -2,8 +2,8 @@
 # Copyright (C) 2025-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="freej2me-plus"
-PKG_VERSION="44883792f350889d297fe4fef82737f041ca1704"
-PKG_SHA256="fe452c0feac2c3debdeaf0d246234d37ee9dac42d754d40fe6f766b041a3b1a6"
+PKG_VERSION="7923b024b93bc24d6d227214e2ea99cb0e8c2234"
+PKG_SHA256="ef3b500594c486159bc570b8ad9cd5a81aadb7c11a270cf3199c70a2c7a7a922"
 PKG_SITE="https://github.com/TASEmulators/freej2me-plus"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain apache-ant:host"
