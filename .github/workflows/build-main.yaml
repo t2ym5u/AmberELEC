@@ -14,6 +14,10 @@ on:
           - RG351V
           - RG351MP
           - RG552
+      warmup:
+        description: 'Run the cache warm-up stage first (turn off once a build finishes in one job)'
+        type: boolean
+        default: true
   push:
     paths-ignore:
       - '.github/**'
@@ -90,11 +94,19 @@ jobs:
                echo 'devices=["RG351P","RG351V","RG351MP","RG552"]' >> $GITHUB_OUTPUT
            fi
 
-  # One clean VM per device, so the devices build in parallel rather than
-  # chained. Each job hands its output to build-finalize as an artifact.
-  build:
+  # A cold build does not fit in the 6h a job gets: the last one needed 4h19 to
+  # reach package 320 of 461. This stage exists to be cut off - it builds what
+  # it can and saves its compiler cache, so the real job below starts with most
+  # of the compiling already done. It cannot hand over the build tree itself,
+  # which is tens of GB, only the cache.
+  #
+  # Once a build completes inside one job, dispatch with warmup=false and this
+  # stage stops costing a runner.
+  build-warmup:
     needs: [build-init]
-    timeout-minutes: 360
+    if: github.event.inputs.warmup != 'false'
+    continue-on-error: true
+    timeout-minutes: 330
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -105,39 +117,33 @@ jobs:
         name: Checkout
         with:
           ref: "${{ needs.build-init.outputs.branch }}"
-      # A hosted runner ships ~14G free on '/', far short of what a distro
-      # build needs. Dropping the preinstalled SDKs we never use frees ~30G.
-      - name: Free up disk space
-        run: |
-            set -e
-            df -h /
-            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-                        /usr/local/share/boost /usr/local/lib/node_modules \
-                        "$AGENT_TOOLSDIRECTORY"
-            sudo apt-get clean
-            df -h /
-      - name: Build ${{ matrix.device }}
-        run: |
-            set -e
-            export CUSTOM_VERSION="${{ needs.build-init.outputs.version }}"
-            # The container runs as the runner's uid, whose HOME (/home/runner)
-            # does not exist inside it, so setuptools cannot create its default
-            # ~/.python-eggs. MarkupSafe installs as a zipped egg holding a C
-            # extension, which has to be extracted there to be importable -
-            # without it, `import jinja2` fails and systemd's meson reports
-            # jinja2 as missing. Point the cache somewhere writable.
-            export PYTHON_EGG_CACHE=/tmp/python-eggs
-            # Two parallelism levels multiply: THREADCOUNT packages build at
-            # once, each with MAKEFLAGS=-j$(nproc) = 4. Left at the nproc
-            # default that is 16 concurrent compilers, and the runner dies with
-            # "lost communication with the server".
-            #
-            # At 1 the runner survives but the job ran 4h19 to reach package
-            # 320/461, which extrapolates past the 6h limit. 2 halves the
-            # concurrency that killed it while roughly halving the wall time -
-            # the memory headroom here is what the next run has to confirm.
-            export THREADCOUNT=2
-            make DOCKER_WORK_DIR=/work docker-${{ matrix.device }}
+      - uses: ./.github/actions/build-device
+        with:
+          device: ${{ matrix.device }}
+          version: ${{ needs.build-init.outputs.version }}
+
+  # One clean VM per device, so the devices build in parallel rather than
+  # chained. Each job hands its output to build-finalize as an artifact.
+  build:
+    needs: [build-init, build-warmup]
+    # Runs whether or not the warm-up stage finished, and when it is skipped
+    # entirely; only a failed build-init should stop it.
+    if: always() && needs.build-init.result == 'success'
+    timeout-minutes: 350
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ${{ fromJSON(needs.build-init.outputs.devices) }}
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+        with:
+          ref: "${{ needs.build-init.outputs.branch }}"
+      - uses: ./.github/actions/build-device
+        with:
+          device: ${{ matrix.device }}
+          version: ${{ needs.build-init.outputs.version }}
       # Trim before upload: these never ship and would otherwise be copied
       # through the artifact store twice.
       - name: Cleanup system artifacts
