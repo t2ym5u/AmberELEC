@@ -98,8 +98,12 @@ docker-%: INTERACTIVE=$(shell [ -t 0 ] && echo "-it")
 # By default pass through anything after `docker-` back into `make`
 docker-%: COMMAND=make $*
 
-# Get .env file ready, filtering macOS-specific vars that don't exist in the Linux container
-docker-%: $(shell env | grep -Ev "^(TMPDIR|SHELL)=" | grep "=" > .env && printf "TMPDIR=/tmp\nSHELL=/bin/bash\n" >> .env)
+# Get .env file ready, filtering host vars that name paths absent in the Linux container.
+# JAVA_HOME is dropped rather than replaced: the image installs its own JRE and leaves
+# JAVA_HOME unset, but a host that has one (a GitHub runner points it at
+# /usr/lib/jvm/temurin-17-jdk-amd64) would otherwise send java-using packages such as
+# freej2me to a path that does not exist inside the container.
+docker-%: $(shell env | grep -Ev "^(TMPDIR|SHELL|JAVA_HOME)=" | grep "=" > .env && printf "TMPDIR=/tmp\nSHELL=/bin/bash\n" >> .env)
 
 # If the user issues a `make docker-shell` just start up bash as the shell to run commands
 docker-shell: COMMAND=bash
