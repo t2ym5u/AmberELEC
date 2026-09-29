@@ -5,9 +5,11 @@
 #  It can also be run manually.
 name: release-dev
 on:
-  schedule:
-    - cron:  '0 5 * * *' # Have ready for beginning of day in Europe where most devs are.
-      
+  # The nightly schedule is upstream's release cadence. On this fork it fires a
+  # full build-main every day, competes for the 'main' concurrency group with
+  # whatever is being tested, and publishes to a repository this fork cannot
+  # reach. Left as manual-only; re-enable the cron if the fork ever cuts its
+  # own dev releases.
   workflow_dispatch:  # allows manual runs
 env:
   BRANCH: dev
