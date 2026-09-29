@@ -3,11 +3,14 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="pulseaudio"
-PKG_VERSION="17.0"
-PKG_SHA256="053794d6671a3e397d849e478a80b82a63cb9d8ca296bd35b73317bb5ceb87b5"
+PKG_VERSION="1f020889c9aa44ea0f63d7222e8c2b62c3f45f68" # v17.0
 PKG_LICENSE="GPL"
 PKG_SITE="http://pulseaudio.org/"
-PKG_URL="https://freedesktop.org/software/pulseaudio/releases/${PKG_NAME}-${PKG_VERSION}.tar.xz"
+# freedesktop.org answers CI runners with 418 on both the www and bare
+# vhosts, intermittently, so the release tarball cannot be fetched here.
+# The GitHub mirror carries the same v17.0 tag; a commit pin needs no
+# checksum and cannot be invalidated by a regenerated archive.
+PKG_URL="https://github.com/pulseaudio/pulseaudio.git"
 PKG_DEPENDS_TARGET="toolchain alsa-lib dbus glib libcap libsndfile libtool openssl soxr speexdsp systemd"
 PKG_LONGDESC="PulseAudio is a sound system for POSIX OSes, meaning that it is a proxy for your sound applications."
 
