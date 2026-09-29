@@ -3,14 +3,18 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="np2kai"
-PKG_VERSION="2c9a6d6845e3b9a4f8907d33cdb0814eb5250824"
-PKG_SHA256="08c4d05400f670ec36e2d362acce157b59857fea3e53ed727bd0f7711814fa16"
+PKG_VERSION="1ea561cd7fd62b33f4e7b3f1c2e30fc3e6089f28"
+PKG_SHA256="b7a2dbf72bb004b15b46b93f234f32a10ad5c23eb68bc88e0288c40df8126e0d"
 PKG_LICENSE="MIT"
-PKG_SITE="https://github.com/AZO234/NP2kai"
+PKG_SITE="https://github.com/libretro/NP2kai"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain"
 PKG_LONGDESC="Neko Project II kai"
 PKG_TOOLCHAIN="make"
+
+pre_make_target() {
+  export CFLAGS="${CFLAGS} -Wno-error=incompatible-pointer-types -Wno-error=int-conversion"
+}
 
 make_target() {
   VERSION="${PKG_VERSION:0:7}"
