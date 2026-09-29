@@ -32,6 +32,11 @@ on:
 #          'concurrency' makes it so that only commit 9 is enqueued to build rather builds 2-9 all runing a build.
 concurrency:
   group: main
+  # Without this a new run queues behind the one holding the group, and a third
+  # arrival cancels it while it waits - which is how a dispatched build sat
+  # pending for nearly five hours and was then dropped by the nightly cron.
+  # Superseding immediately keeps the newest request the one that runs.
+  cancel-in-progress: true
 
 env:
   # This is used by 'make docker-*' commands to determine image to build with.
