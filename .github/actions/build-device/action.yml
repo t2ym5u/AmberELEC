@@ -76,6 +76,21 @@ runs:
 
           make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
 
+    # Killing the build step does not stop the container it started, which keeps
+    # writing into the ccache directory. tar then aborts with "file changed as
+    # we read it" and the save is lost - exactly when a timed-out job has the
+    # most worth keeping. Quiesce the directory first.
+    - name: Stop the build container
+      if: always()
+      shell: bash
+      run: |
+          ids=$(docker ps -q 2>/dev/null || true)
+          if [ -n "$ids" ]; then
+            echo "stopping: $ids"
+            docker stop -t 60 $ids >/dev/null 2>&1 || true
+          fi
+          sync
+
     - name: Compiler cache stats
       if: always()
       shell: bash
