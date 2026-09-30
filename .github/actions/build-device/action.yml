@@ -62,10 +62,16 @@ runs:
           export CCACHE_DIR="$HOME/.cache/amberelec-ccache"
 
           # config/options assigns CCACHE_CACHE_SIZE unconditionally, so the
-          # 20G default cannot be lowered through it; ccache 4.x lets the
-          # environment win instead. A repository gets 10G of Actions cache in
-          # total, shared by all four devices, so cap each one well under it.
-          export CCACHE_MAXSIZE=2G
+          # size cannot be set through it; ccache 4.x lets the environment win
+          # instead - verified, it reports "(environment) max_size".
+          #
+          # 2G was too small and the cache thrashed: it sat at ~1.9G, so
+          # compiling the mame cores evicted entries that were still needed and
+          # the cache grew 4MB across a 5.5h job. Everything evicted gets
+          # recompiled next run - mame2015/2016/2010 alone are ~112 minutes.
+          # 6G leaves room for a full device build; GitHub allows 10G per
+          # repository and evicts least-recently-used entries on its own.
+          export CCACHE_MAXSIZE=6G
 
           # Two parallelism levels multiply: THREADCOUNT packages build at
           # once, each with MAKEFLAGS=-j$(nproc) = 4. Left at the nproc
@@ -91,10 +97,17 @@ runs:
           fi
           sync
 
+    # Hit rate and size, so a cache that is thrashing or not being used shows
+    # up here rather than as an unexplained slow build.
     - name: Compiler cache stats
       if: always()
       shell: bash
-      run: du -sh "$HOME/.cache/amberelec-ccache" 2>/dev/null || true
+      run: |
+          du -sh "$HOME/.cache/amberelec-ccache" 2>/dev/null || true
+          docker run --rm -e CCACHE_DIR=/c -e CCACHE_MAXSIZE=6G \
+            -v "$HOME/.cache/amberelec-ccache":/c \
+            "${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}" \
+            bash -c 'ccache -s 2>/dev/null | head -20' || true
 
     # always(), because the point is to keep what a failed or timed-out job
     # already compiled.
