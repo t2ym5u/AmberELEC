@@ -109,10 +109,30 @@ runs:
             "${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}" \
             bash -c 'ccache -s 2>/dev/null | head -20' || true
 
+    # restore-keys picks the most recent matching cache, not the largest, so a
+    # tiny one saved by a job that barely started will shadow a good one and the
+    # next run recompiles from scratch - a cancelled run once published an empty
+    # cache that cost a full gcc rebuild. Only save when there is enough here to
+    # be worth restoring.
+    - name: Check cache is worth saving
+      if: always()
+      id: cache_check
+      shell: bash
+      run: |
+          size=$(du -sm "$HOME/.cache/amberelec-ccache" 2>/dev/null | cut -f1)
+          size=${size:-0}
+          echo "cache is ${size}MB"
+          if [ "$size" -ge 500 ]; then
+            echo "save=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "save=false" >> "$GITHUB_OUTPUT"
+            echo "too small to publish - leaving the existing cache in place"
+          fi
+
     # always(), because the point is to keep what a failed or timed-out job
     # already compiled.
     - name: Save compiler cache
-      if: always()
+      if: always() && steps.cache_check.outputs.save == 'true'
       uses: actions/cache/save@v4
       with:
         path: ~/.cache/amberelec-ccache
