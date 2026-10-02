@@ -118,15 +118,24 @@ runs:
       if: always()
       id: cache_check
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
           size=$(du -sm "$HOME/.cache/amberelec-ccache" 2>/dev/null | cut -f1)
           size=${size:-0}
-          echo "cache is ${size}MB"
-          if [ "$size" -ge 500 ]; then
+          # Largest cache already published for this device. Comparing against
+          # it, rather than a fixed floor, is what stops a short run shadowing
+          # a better cache: a fixed 500MB let a 662MB one replace a 2.8G one.
+          best=$(gh api "repos/${GITHUB_REPOSITORY}/actions/caches" --paginate \
+                   --jq "[.actions_caches[]|select(.key|startswith(\"ccache-${{ inputs.device }}-\"))|.size_in_bytes]|max // 0" \
+                 2>/dev/null || echo 0)
+          best_mb=$(( ${best:-0} / 1024 / 1024 ))
+          echo "this run: ${size}MB, best published: ${best_mb}MB"
+          if [ "$size" -ge "$best_mb" ]; then
             echo "save=true" >> "$GITHUB_OUTPUT"
           else
             echo "save=false" >> "$GITHUB_OUTPUT"
-            echo "too small to publish - leaving the existing cache in place"
+            echo "smaller than what is already cached - leaving that in place"
           fi
 
     # always(), because the point is to keep what a failed or timed-out job
