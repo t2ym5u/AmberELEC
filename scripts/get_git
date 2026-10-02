@@ -126,7 +126,19 @@ cd "${opwd}"
 
 if [ "${GIT_FOUND}" = "no" ]; then
   build_msg "CLR_GET" "GIT CLONE" "${1}"
-  git clone ${GIT_CLONE_PARAMS} "${PKG_URL}" "${PACKAGE}"
+  # Retry with a pause, like get_archive does. A single transient server
+  # error otherwise costs the whole build: savannah returned HTTP 500 for
+  # one request and the run died on configtools after openssl had already
+  # been built.
+  NBCLONE=5
+  while true; do
+    git clone ${GIT_CLONE_PARAMS} "${PKG_URL}" "${PACKAGE}" && break
+    NBCLONE=$((NBCLONE - 1))
+    [ ${NBCLONE} -le 0 ] && die "\nCannot clone ${1} : ${PKG_URL}\nTry later!"
+    rm -rf "${PACKAGE}"
+    build_msg "CLR_WARNING" "WARNING" "clone failed, retrying in $(( (6 - NBCLONE) * 5 ))s"
+    sleep $(( (6 - NBCLONE) * 5 ))
+  done
 elif [ ! "${GIT_DIR}" = "${PACKAGE}" ]; then
   mv "${GIT_DIR}" "${PACKAGE}"
 fi
