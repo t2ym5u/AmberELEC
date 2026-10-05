@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="retroarch-assets"
-PKG_VERSION="73106363e14e34c08a5854b4cfbc29f184e3b783"
-PKG_SHA256="9a1ea65345b62aac6d20d19e21b3132f66770c65ad976f8badb0178219a135d7"
+PKG_VERSION="d9f969054dc7fbb6fa89519036d2b971e0855b51"
+PKG_SHA256="ae16282179bc6c10f8e791349d06415ea94304525f5501a3b4e6aed5444d1865"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/libretro/retroarch-assets"
 PKG_URL="https://github.com/libretro/retroarch-assets/archive/${PKG_VERSION}.tar.gz"
