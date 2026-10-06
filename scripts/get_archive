@@ -28,6 +28,18 @@ build_msg "CLR_GET" "GET" "${1} (archive)" "indent"
 pkg_lock_status "GETPKG" "${PKG_NAME}" "unpack" "downloading package..."
 
 PACKAGE_MIRROR="${DISTRO_MIRROR}/${PKG_NAME}/${PKG_SOURCE_NAME}"
+
+# Two dozen packages fetch from ftp.gnu.org, so an outage there stops the
+# build dead - as one did, with every GNU host refusing connections while
+# the rest of the network was fine. kernel.org carries the same tree and
+# serves byte-identical files (spot-checked against PKG_SHA256), so try it
+# before giving up. Derived from the URL rather than configured per package,
+# so it covers all of them at once.
+GNU_MIRROR=""
+case "${PKG_URL}" in
+  https://ftp.gnu.org/gnu/*)
+    GNU_MIRROR="https://mirrors.kernel.org/gnu/${PKG_URL#https://ftp.gnu.org/gnu/}" ;;
+esac
 [ "${VERBOSE}" != "yes" ] && WGET_OPT=-q
 WGET_CMD="wget --output-file=- --timeout=30 --tries=3 --passive-ftp --no-check-certificate -c ${WGET_OPT} --progress=bar:force --show-progress -O ${PACKAGE}"
 
@@ -38,7 +50,7 @@ rm -f "${STAMP_URL}" "${STAMP_SHA}"
 
 NBWGET=10
 while [ ${NBWGET} -gt 0 ]; do
-  for url in "${PKG_URL}" "${PACKAGE_MIRROR}"; do
+  for url in "${PKG_URL}" ${GNU_MIRROR:+"${GNU_MIRROR}"} "${PACKAGE_MIRROR}"; do
     if [[ "$PKG_USETOKEN" == "yes" ]]; then
       if [[ $url == https://github.com/* ]] && [[ -n $COREELEC_GHTOKEN ]]; then
         WGET_HEADER=--header="Authorization: token $COREELEC_GHTOKEN"
