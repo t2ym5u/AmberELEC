@@ -37,20 +37,6 @@ runs:
           sudo apt-get clean
           df -h /
 
-          # A runner has a second disk at /mnt that this build never touches.
-          # Measured on a full run: of the 99G consumed on '/', 70G is the
-          # build tree under /var/lib/docker and ~29G is downloaded sources -
-          # which left only 23G for image assembly, and that is where it ran
-          # out. Putting sources on /mnt roughly doubles the headroom for the
-          # rootfs, squashfs and .img without touching the build tree.
-          if [ -d /mnt ]; then
-            sudo mkdir -p /mnt/amberelec-sources
-            sudo chown "$(id -u):$(id -g)" /mnt/amberelec-sources
-            mkdir -p sources
-            sudo mount --bind /mnt/amberelec-sources sources
-            echo "sources now on /mnt:"
-            df -h /mnt sources | tail -2
-          fi
 
     # Restored before the build and saved after it, so successive jobs compile
     # less each time. restore-keys takes the newest cache for this device when

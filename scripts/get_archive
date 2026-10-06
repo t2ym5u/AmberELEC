@@ -61,7 +61,13 @@ while [ ${NBWGET} -gt 0 ]; do
   # serving an error page in place of the tarball recovers within seconds,
   # but without a pause all ten attempts are spent in about two of them and
   # the build fails on a hiccup it could have ridden out.
-  [ ${NBWGET} -gt 0 ] && sleep $(( (11 - NBWGET) * 2 ))
+  #
+  # The window matters as much as the retry count: at 2s steps the ten
+  # attempts spanned under two minutes, and download.samba.org twice
+  # outlasted that and took a multi-hour build down with it. 6s steps
+  # stretch the same ten attempts across about five minutes. This only
+  # runs after a download has already failed.
+  [ ${NBWGET} -gt 0 ] && sleep $(( (11 - NBWGET) * 6 ))
 done
 
 if [ ${NBWGET} -eq 0 ]; then
