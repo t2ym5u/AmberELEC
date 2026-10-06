@@ -46,6 +46,13 @@ case "${PKG_URL}" in
     _gnu_path="${_gnu_path#pub/}"
     GNU_MIRROR="https://mirrors.kernel.org/${_gnu_path}"
     ;;
+  # Savannah's release area, under both its gnu.org and nongnu.org names,
+  # went down in the same outage. netcologne carries the same tree; its
+  # copies of attr, libunwind and freetype each hash to the PKG_SHA256
+  # already declared here, which is what makes them safe to accept.
+  *//download.savannah.gnu.org/releases/*|*//download.savannah.nongnu.org/releases/*)
+    GNU_MIRROR="https://mirror.netcologne.de/savannah/${PKG_URL#*/releases/}"
+    ;;
 esac
 [ "${VERBOSE}" != "yes" ] && WGET_OPT=-q
 WGET_CMD="wget --output-file=- --timeout=30 --tries=3 --passive-ftp --no-check-certificate -c ${WGET_OPT} --progress=bar:force --show-progress -O ${PACKAGE}"
