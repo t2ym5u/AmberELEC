@@ -130,12 +130,33 @@ if [ "${GIT_FOUND}" = "no" ]; then
   # error otherwise costs the whole build: savannah returned HTTP 500 for
   # one request and the run died on configtools after openssl had already
   # been built.
+  # A mirror to fall back on when the primary host is unreachable. Retrying
+  # does not help when the whole of gnu.org is down, which took a build out
+  # on configtools. A commit hash is its own integrity check, so a mirror is
+  # safe as long as it carries the pinned commit.
+  GIT_MIRROR=""
+  case "${PKG_URL}" in
+    *git.savannah.gnu.org/git/config.git) GIT_MIRROR="https://github.com/build2/config.git" ;;
+  esac
+
   NBCLONE=5
   while true; do
     git clone ${GIT_CLONE_PARAMS} "${PKG_URL}" "${PACKAGE}" && break
+    rm -rf "${PACKAGE}"
+    if [ -n "${GIT_MIRROR}" ]; then
+      build_msg "CLR_WARNING" "WARNING" "clone failed, trying mirror ${GIT_MIRROR}"
+      if git clone ${GIT_CLONE_PARAMS} "${GIT_MIRROR}" "${PACKAGE}"; then
+        # Later checks here, and _get_repo_already_downloaded on a second
+        # call, compare origin against PKG_URL and abort on a mismatch.
+        # The commit is the same object either way, so point origin back at
+        # the canonical URL rather than leaving a clone that trips them.
+        git -C "${PACKAGE}" remote set-url origin "${PKG_URL}"
+        break
+      fi
+      rm -rf "${PACKAGE}"
+    fi
     NBCLONE=$((NBCLONE - 1))
     [ ${NBCLONE} -le 0 ] && die "\nCannot clone ${1} : ${PKG_URL}\nTry later!"
-    rm -rf "${PACKAGE}"
     build_msg "CLR_WARNING" "WARNING" "clone failed, retrying in $(( (6 - NBCLONE) * 5 ))s"
     sleep $(( (6 - NBCLONE) * 5 ))
   done
