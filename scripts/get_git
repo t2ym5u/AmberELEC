@@ -48,7 +48,18 @@ pkg_lock_status "GETPKG" "${PKG_NAME}" "unpack" "processing package repository..
 
 rm -f "${STAMP_URL}" "${STAMP_SHA}"
 
-GIT_CLONE_PARAMS="--recursive"
+# Deliberately not --recursive. That pulls submodules during the clone,
+# while the superproject is still on its default branch and before the
+# reset to PKG_VERSION below - and it honours a "shallow = true" hint in
+# .gitmodules, so a submodule commit that is not the tip of its default
+# branch cannot be fetched. TIC-80 pins such a commit in vendor/quickjs
+# and no retry or mirror can help, because the fetch is asking the server
+# for an object it will not serve.
+#
+# The explicit "git submodule update --init --recursive" further down
+# already populates submodules, and does it after the checkout, so the
+# right commits are known by then.
+GIT_CLONE_PARAMS=""
 # A submodule can declare "shallow = true" in .gitmodules, which makes git
 # fetch only the tip of its default branch. When the superproject pins a
 # commit that is not that tip the fetch succeeds and the commit is still
