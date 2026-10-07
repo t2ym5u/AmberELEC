@@ -49,7 +49,13 @@ pkg_lock_status "GETPKG" "${PKG_NAME}" "unpack" "processing package repository..
 rm -f "${STAMP_URL}" "${STAMP_SHA}"
 
 GIT_CLONE_PARAMS="--recursive"
-GIT_SUBMODULE_PARAMS=""
+# A submodule can declare "shallow = true" in .gitmodules, which makes git
+# fetch only the tip of its default branch. When the superproject pins a
+# commit that is not that tip the fetch succeeds and the commit is still
+# missing, and the build stops - TIC-80 pins a vendor/quickjs commit two
+# behind master, and both this tree and upstream hit it. Ignore that
+# recommendation unless a depth was asked for explicitly.
+GIT_SUBMODULE_PARAMS="--no-recommend-shallow"
 
 [ -n "${PKG_GIT_CLONE_BRANCH}" ] && GIT_CLONE_PARAMS="${GIT_CLONE_PARAMS} --branch ${PKG_GIT_CLONE_BRANCH}"
 [ "${PKG_GIT_CLONE_SINGLE}" = "yes" ] && GIT_CLONE_PARAMS="${GIT_CLONE_PARAMS} --single-branch"
