@@ -88,13 +88,11 @@ runs:
           # concurrent compilers and the runner died with "lost communication
           # with the server"; 1 survived but was far too slow; 2 built.
           #
-          # Raised to 3 because compilation is no longer the bottleneck. With
-          # a warm cache a second stage reached 382 packages where the first
-          # reached 390 - no further progress at all - so the remaining hours
-          # go on configure, link and install, which ccache cannot speed up
-          # and which are lighter on memory than compiling. More packages in
-          # flight is the only lever left that does not cost money.
-          export THREADCOUNT=3
+          # 3 was tried and measured: 382 packages in 6h03, against 382 in
+          # 5h53 at 2. No gain at all, so the build is not CPU-bound at this
+          # point - raising it only adds memory pressure for nothing. Back to
+          # 2, which is the fastest setting that has not killed a runner.
+          export THREADCOUNT=2
 
           make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
 
