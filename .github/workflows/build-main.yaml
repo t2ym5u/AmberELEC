@@ -111,7 +111,7 @@ jobs:
     needs: [build-init]
     if: github.event.inputs.warmup != 'false'
     continue-on-error: true
-    timeout-minutes: 330
+    timeout-minutes: 350
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -134,7 +134,7 @@ jobs:
     # Runs whether or not the warm-up stage finished, and when it is skipped
     # entirely; only a failed build-init should stop it.
     if: always() && needs.build-init.result == 'success'
-    timeout-minutes: 350
+    timeout-minutes: 360
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -83,12 +83,18 @@ runs:
           # repository and evicts least-recently-used entries on its own.
           export CCACHE_MAXSIZE=6G
 
-          # Two parallelism levels multiply: THREADCOUNT packages build at
-          # once, each with MAKEFLAGS=-j$(nproc) = 4. Left at the nproc
-          # default that is 16 concurrent compilers, and the runner dies with
-          # "lost communication with the server". 1 survives but ran 4h19 to
-          # reach package 320/461; 2 halves the concurrency that killed it.
-          export THREADCOUNT=2
+          # Two parallelism levels multiply: THREADCOUNT packages at once,
+          # each with MAKEFLAGS=-j$(nproc) = 4. The nproc default meant ~16
+          # concurrent compilers and the runner died with "lost communication
+          # with the server"; 1 survived but was far too slow; 2 built.
+          #
+          # Raised to 3 because compilation is no longer the bottleneck. With
+          # a warm cache a second stage reached 382 packages where the first
+          # reached 390 - no further progress at all - so the remaining hours
+          # go on configure, link and install, which ccache cannot speed up
+          # and which are lighter on memory than compiling. More packages in
+          # flight is the only lever left that does not cost money.
+          export THREADCOUNT=3
 
           make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
 
