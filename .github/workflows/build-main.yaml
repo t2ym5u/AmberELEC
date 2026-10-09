@@ -24,6 +24,11 @@ on:
       - 'LICENSE.md'
       - 'Dockerfile'
       - '.dockerignore'
+      # Documentation changes nothing about what gets built, and with
+      # cancel-in-progress a docs commit would otherwise kill a running build -
+      # which is exactly what a FORK-CHANGES.md push did.
+      - '**.md'
+      - 'docs/**'
     branches:
       - main
       - dev
