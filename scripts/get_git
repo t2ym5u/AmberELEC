@@ -182,7 +182,18 @@ elif [ ! "${GIT_DIR}" = "${PACKAGE}" ]; then
 fi
 
 ( cd "${PACKAGE}"
-  [ $(git log --oneline --pretty=tformat:"%H" | grep "^${PKG_VERSION}" | wc -l) -eq 1 ] || die "There is no commit '${PKG_VERSION}' on branch '$(git branch | grep ^\* | cut -d ' ' -f2)' of package '${1}'! Aborting!"
+  # What matters is that the clone holds the commit, not that it sits on the
+  # history of the checked-out branch. Upstreams rebase: SameBoy's libretro
+  # branch was force-pushed between two jobs of one run, leaving the pinned
+  # commit present in the clone but no longer an ancestor of the tip, and the
+  # old "is it in git log" test failed on a repository that had everything it
+  # needed. If the object really is absent, ask the server for it by sha
+  # before giving up.
+  if ! git cat-file -e "${PKG_VERSION}^{commit}" 2>/dev/null; then
+    build_msg "CLR_WARNING" "WARNING" "${PKG_VERSION} not in clone, fetching it directly"
+    git fetch --quiet origin "${PKG_VERSION}" 2>/dev/null || true
+  fi
+  git cat-file -e "${PKG_VERSION}^{commit}" 2>/dev/null || die "There is no commit '${PKG_VERSION}' in package '${1}'! Aborting!"
   git reset --hard "${PKG_VERSION}"
   build_msg "CLR_GET" "GIT SUBMODULE" "${1}"
   git submodule update --init --recursive ${GIT_SUBMODULE_PARAMS}
