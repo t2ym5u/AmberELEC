@@ -115,7 +115,12 @@ jobs:
   build-warmup:
     needs: [build-init]
     if: github.event.inputs.warmup != 'false'
-    continue-on-error: true
+    # Deliberately not continue-on-error. The job below now keys off
+    # needs.build-warmup.result, and continue-on-error is documented to stop a
+    # failed job failing the run - leaving it ambiguous whether result would
+    # then read 'success' and wrongly skip the fallback, producing nothing.
+    # Without it the result is unambiguous; the cost is only that the run shows
+    # as failed when this stage is cut short, which is accurate anyway.
     timeout-minutes: 350
     runs-on: ubuntu-latest
     strategy:
@@ -131,14 +136,39 @@ jobs:
         with:
           device: ${{ matrix.device }}
           version: ${{ needs.build-init.outputs.version }}
+      # This stage was built to be cut short, but with a warm cache it can now
+      # finish the whole build - one did, image and all, and the result was
+      # thrown away because only the job below published anything. If it got
+      # there, keep it.
+      - name: Cleanup system artifacts
+        if: success()
+        run: |
+            set -e
+            rm -rf release/aarch64/RG*/*.system*
+            rm -rf release/aarch64/RG*/*.kernel*
+      - name: Cleanup system artifacts (no .img in non-release 'main' builds)
+        if: success() && github.event.client_payload.release_tag == ''
+        run: |
+            set -e
+            rm -rf release/aarch64/RG*/*.img.gz*
+      - name: Pass ${{ matrix.device }} build to build-finalize
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.device }}
+          path: release/aarch64/${{ matrix.device }}/
+          retention-days: 1
 
   # One clean VM per device, so the devices build in parallel rather than
   # chained. Each job hands its output to build-finalize as an artifact.
   build:
     needs: [build-init, build-warmup]
-    # Runs whether or not the warm-up stage finished, and when it is skipped
-    # entirely; only a failed build-init should stop it.
-    if: always() && needs.build-init.result == 'success'
+    # Only when the warm-up did not finish the build itself - including when it
+    # is skipped entirely, which is the warmup=false case. Re-running a build
+    # the previous job already completed costs a runner and produces nothing.
+    if: >-
+      always() && needs.build-init.result == 'success'
+      && needs.build-warmup.result != 'success'
     timeout-minutes: 360
     runs-on: ubuntu-latest
     strategy:
@@ -175,7 +205,11 @@ jobs:
           retention-days: 1
 
   build-finalize:
-    needs: [build-init, build]
+    needs: [build-init, build-warmup, build]
+    # Either stage can be the one that produced the artifacts now.
+    if: >-
+      always() && needs.build-init.result == 'success'
+      && (needs.build-warmup.result == 'success' || needs.build.result == 'success')
     timeout-minutes: 360
     runs-on: ubuntu-latest
     steps:
