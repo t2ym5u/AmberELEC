@@ -105,7 +105,7 @@ Factorise les étapes de build entre les deux étages. Contient :
 | arrêt du conteneur avant sauvegarde | sinon `tar` échoue (« file changed as we read it ») et le cache est perdu |
 | garde-fou de cache **relatif** | on ne publie que si le cache est ≥ au meilleur déjà stocké ; un seuil fixe avait laissé un cache de 662 Mo écraser celui de 2,8 Go |
 
-### 2.6 Cache d'état de build (dernier ajout)
+### 2.6 Cache d'état de build — **tenté puis retiré**
 
 ccache n'accélère que la compilation. Mesure : un 2ᵉ étage avec cache chaud
 atteignait 382 paquets quand le 1ᵉʳ en atteignait 390 — **aucun gain**.
@@ -115,9 +115,25 @@ correspond, sans `unpack`/`configure`/`link`/`install`. Rien ne transportait ces
 stamps entre jobs. Ils sont désormais mis en cache (`.stamps` + `image/` +
 `toolchain/` ≈ 1 Go contre 6,7 Go d'arbre complet).
 
-Viable car `calculate_stamp` hache les fichiers de l'arbre **source** et
-normalise les chemins (`config/functions:851`) — le hash est indépendant de la
-machine.
+Le transport fonctionnait (restauration et amorçage confirmés dans les logs), et
+`calculate_stamp` hache bien les fichiers de l'arbre **source** avec des chemins
+normalisés (`config/functions:851`) — le hash est indépendant de la machine.
+
+**Mais l'approche a été retirée.** Le `toolchain/` est un état mutable partagé,
+modifié pendant les `install`. Un job coupé en plein paquet le laisse déchiré :
+après l'échec sur libtool, le `libtoolize` du toolchain sauvegardé avait perdu
+ses fichiers de données (`libltdl/ltdl.mk`). Cet état corrompu était ensuite
+**propagé de run en run** — chaque build repartait du toolchain cassé et
+échouait au même endroit, à 7 min au lieu d'atteindre 382 paquets.
+
+Or un job coupé en plein paquet est précisément le **cas normal** ici. La
+précondition de l'approche — un instantané cohérent du toolchain — n'est donc
+pas satisfiable en l'état. Rendre cela sûr demanderait de ne sauvegarder qu'aux
+frontières de paquets, ce qui suppose de modifier le système de build lui-même.
+
+Le mécanisme de stamps reste toutefois le bon levier théorique : il est le seul
+à pouvoir supprimer le `unpack`/`configure`/`link`/`install` qui consomme
+désormais l'essentiel du temps.
 
 ### 2.7 `tools/audit-sources` + workflow `source-audit`
 
