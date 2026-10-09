@@ -50,67 +50,6 @@ runs:
         restore-keys: |
           ccache-${{ inputs.device }}-
 
-    # The compiler cache only makes compiling cheaper. What actually costs the
-    # hours now is unpack/configure/link/install, which it cannot touch - a
-    # second stage with a warm ccache reached 382 packages where the first
-    # reached 390. scripts/build and scripts/install both open with a stamp
-    # check that exits immediately when the stamp matches, skipping all of
-    # that, so carrying the stamps across jobs is what makes a second job
-    # pick up where the first stopped.
-    #
-    # calculate_stamp hashes the package's source-tree files and strips the
-    # ROOT prefix, so the hash does not depend on the machine - which is what
-    # makes this work on a fresh runner at all.
-    #
-    # Only the state is kept: .stamps, image/ (which holds the install stamps
-    # and the rootfs) and toolchain/. That measured ~1G against a 6.7G tree,
-    # because the per-package build directories are the bulk and a skipped
-    # package never looks at its own.
-    - name: Restore build state
-      id: state_restore
-      uses: actions/cache/restore@v4
-      with:
-        path: ~/amberelec-state
-        key: state-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
-        restore-keys: |
-          state-${{ inputs.device }}-
-
-    - name: Seed the build volume from the restored state
-      if: steps.state_restore.outputs.cache-matched-key != ''
-      shell: bash
-      run: |
-          set -e
-          [ -d "$HOME/amberelec-state" ] || exit 0
-          vol="amberelec-build-${{ inputs.device }}"
-          docker volume inspect "$vol" >/dev/null 2>&1 || docker volume create "$vol" >/dev/null
-          docker run --rm --user 0:0 -v "$vol":/build -v "$HOME/amberelec-state":/state:ro \
-            "${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}" \
-            bash -c 'set -e
-              d=$(ls -d /state/build.* 2>/dev/null | head -1) || exit 0
-              [ -n "$d" ] || exit 0
-              b="/build/$(basename "$d")"
-              mkdir -p "$b"
-              cp -a "$d"/. "$b/"
-              # A job that stopped mid-package can leave a target package with
-              # a build stamp but no install stamp. Keeping that pair means the
-              # next job skips the build - so never unpacks - and then runs the
-              # install against a source tree that is not there:
-              #   automake: error: cannot open < libltdl/ltdl.mk
-              # Drop those build stamps so such a package is simply rebuilt.
-              # Host-only packages are untouched; they have no install stamp by
-              # design.
-              dropped=0
-              for st in "$b"/.stamps/*/build_target; do
-                [ -e "$st" ] || continue
-                pkg=$(basename "$(dirname "$st")")
-                if [ ! -e "$b/image/.stamps/$pkg/install_target" ]; then
-                  rm -f "$st"; dropped=$((dropped+1))
-                fi
-              done
-              echo "dropped $dropped build stamp(s) with no matching install stamp"
-              echo "usable: $(ls -d "$b"/image/.stamps/*/ 2>/dev/null | wc -l) installed package(s)"
-              chmod -R a+rwX /build'
-
     - name: Build ${{ inputs.device }}
       shell: bash
       run: |
@@ -172,29 +111,6 @@ runs:
           fi
           sync
 
-    # Pulled out of the docker volume, which actions/cache cannot reach, and
-    # kept small: stamps, install stamps + rootfs, toolchain. Not the
-    # per-package build directories - those are the 6.7G and a stamped
-    # package never reopens its own.
-    - name: Extract build state
-      if: always()
-      shell: bash
-      run: |
-          vol="amberelec-build-${{ inputs.device }}"
-          docker volume inspect "$vol" >/dev/null 2>&1 || exit 0
-          rm -rf "$HOME/amberelec-state"; mkdir -p "$HOME/amberelec-state"
-          docker run --rm --user 0:0 -v "$vol":/build -v "$HOME/amberelec-state":/state \
-            "${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}" \
-            bash -c 'set -e
-              b=$(ls -d /build/build.* 2>/dev/null | head -1) || exit 0
-              [ -n "$b" ] || exit 0
-              o="/state/$(basename "$b")"; mkdir -p "$o"
-              for d in .stamps image toolchain; do
-                [ -e "$b/$d" ] && cp -a "$b/$d" "$o/" || true
-              done
-              chmod -R a+rwX /state' || true
-          du -sh "$HOME/amberelec-state" 2>/dev/null || true
-
     # Hit rate and size, so a cache that is thrashing or not being used shows
     # up here rather than as an unexplained slow build.
     - name: Compiler cache stats
@@ -249,12 +165,3 @@ runs:
         path: ~/.cache/amberelec-ccache
         key: ccache-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
 
-    # Saved whenever there is anything to save: unlike the compiler cache,
-    # a state directory from a job that stopped early is still strictly
-    # progress - every stamp in it is a package the next job can skip.
-    - name: Save build state
-      if: always()
-      uses: actions/cache/save@v4
-      with:
-        path: ~/amberelec-state
-        key: state-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
