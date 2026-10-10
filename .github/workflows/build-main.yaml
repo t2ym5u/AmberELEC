@@ -36,7 +36,11 @@ on:
 # Example: 1st commit in main starts a build then 2-9 commits come in during the first build.
 #          'concurrency' makes it so that only commit 9 is enqueued to build rather builds 2-9 all runing a build.
 concurrency:
-  group: main
+  # Per device, not one group for everything: with cancel-in-progress a second
+  # device dispatched while the first is building would otherwise cancel it,
+  # so the four devices could never run at the same time. Same device twice
+  # still supersedes, which is what the group is for.
+  group: main-${{ github.event.inputs.device || 'all' }}
   # Without this a new run queues behind the one holding the group, and a third
   # arrival cancels it while it waits - which is how a dispatched build sat
   # pending for nearly five hours and was then dropped by the nightly cron.
