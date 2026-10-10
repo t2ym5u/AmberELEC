@@ -4,7 +4,9 @@ Référence des changements apportés à `t2ym5u/AmberELEC` branche `dev` pour
 rendre le build RG351P fonctionnel sur GitHub Actions.
 
 - **Base** : `51ea20d8` (18/09/2026), dernier commit avant ces travaux
-- **Portée** : 52 commits, 125 fichiers
+- **Portée** : 59 commits, 126 fichiers
+- **État** : RG351P **compile et produit une image** (run `37957287962`, 4h49,
+  artefact de 949 Mo). RG351V / RG351MP / RG552 en cours de première validation.
 - **Upstream de référence** : `AmberELEC/AmberELEC@dev`
 
 ---
@@ -135,7 +137,27 @@ Le mécanisme de stamps reste toutefois le bon levier théorique : il est le seu
 à pouvoir supprimer le `unpack`/`configure`/`link`/`install` qui consomme
 désormais l'essentiel du temps.
 
-### 2.7 `tools/audit-sources` + workflow `source-audit`
+### 2.7 Publication des artefacts par l'étage qui aboutit
+
+La préchauffe était conçue pour être interrompue, et seul le job `build`
+publiait. Quand elle a commencé à terminer le build (cache chaud), son image
+complète était **jetée** et `build` refaisait tout.
+
+Désormais : la préchauffe publie si elle aboutit, et `build` n'est exécuté que
+si elle n'a **pas** fini. Un runner économisé, plus d'image perdue.
+
+`continue-on-error` a été retiré de la préchauffe : le repli se décide sur
+`needs.build-warmup.result`, et ce drapeau rend ambigu ce que `result` renvoie
+en cas d'échec — un faux `success` ferait sauter le repli sans rien produire.
+
+### 2.8 `concurrency` — groupe par device
+
+`group: main` était partagé par les quatre devices. Avec `cancel-in-progress`,
+dispatcher RG351V puis RG351MP annulait le premier : **un seul device pouvait
+tourner à la fois**. Le groupe est désormais `main-<device>` — les quatre
+builds coexistent, et redispatcher le *même* device supersède toujours.
+
+### 2.9 `tools/audit-sources` + workflow `source-audit`
 
 Vérifie les 613 sources sans télécharger les contenus, en ~10 min. À lancer
 **depuis un runner cloud** : `gmplib.org` répond à une IP résidentielle et
@@ -170,6 +192,13 @@ et `get_archive` dispose d'un repli mirroir — un paquet n'est cassé que si
   checkout sur `PKG_VERSION` et respectait `shallow = true`, rendant inatteignable
   le commit `vendor/quickjs` de TIC-80. La mise à jour explicite des sous-modules
   qui suit le reset s'en charge correctement.
+- **Contrôle du commit assoupli** : `get_git` exigeait que `PKG_VERSION` soit un
+  **ancêtre de la branche extraite**. Or les upstreams rebasent — la branche
+  `libretro` de SameBoy a été force-push *entre deux jobs d'un même run*,
+  rendant le commit divergent (49 devant, 1 derrière). Le clone le contenait
+  pourtant : `git clone --branch X` récupère toutes les refs, et le `reset`
+  fonctionnait. Le contrôle teste désormais l'**existence de l'objet**, avec
+  repli sur un `fetch` par SHA. Couvre les 62 paquets git.
 
 ### `Makefile`
 
@@ -290,26 +319,32 @@ Versions upstream des patches, cohérentes avec les versions synchronisées.
 
 ## 7. Ce qui n'est pas résolu
 
-### 7.1 Le build dépasse le plafond de 6 h — problème ouvert
+### 7.1 Durée du build — **résolu, mais sans marge**
 
-**Le build compile entièrement** : derniers runs à 382-400 paquets installés,
-**zéro échec**, étape d'assemblage de l'image atteinte. Le blocage est un
-plafond de ressources, pas un défaut du code.
+RG351P tient désormais dans un job : **4h49** pour 400 paquets et l'image
+complète, sous le plafond de 6 h.
 
-Leviers gratuits mesurés et épuisés :
+Ce qui a débloqué n'est pas un réglage mais l'**accumulation du ccache**
+(4,8 Go), enrichi run après run, y compris par ceux qui échouaient. Les deux
+derniers échecs de durée étaient en réalité masqués par le cache d'état
+corrompu (§2.6) : une fois celui-ci supprimé, le build est passé.
+
+Leviers mesurés — à ne pas retenter :
 
 | Levier | Résultat mesuré |
 |---|---|
-| Cache ccache | +47 % au début, puis saturé |
+| Cache ccache | +47 % puis saturé — mais c'est lui qui a débloqué |
 | 2ᵉ étage (préchauffe) | 382 paquets après 390 — aucun gain |
 | `THREADCOUNT=3` | 382 en 6h03 vs 382 en 5h53 — aucun gain |
+| Cache d'état de build | **nuisible** — toolchain corrompu propagé (§2.6) |
 
-Le temps restant part dans `unpack`/`configure`/`link`/`install`. Le cache
-d'état (§2.6) est la tentative en cours ; **son efficacité n'est pas encore
-mesurée**.
+**La marge reste faible** (~1 h). Un cache vidé — GitHub évince après 7 jours
+d'inactivité — ramènerait un build à froid au-delà des 6 h. Dans ce cas,
+dispatcher avec `warmup=true` : le premier étage reconstitue le cache, le
+second termine. C'est précisément le rôle du découpage.
 
-Si elle ne suffit pas, les options sont : **larger runner GitHub** (payant,
-~÷2 sur le temps), **runner self-hosted** (ce qu'utilise upstream), ou
+Si la marge devient structurellement insuffisante : **larger runner GitHub**
+(payant, ~÷2), **runner self-hosted** (ce qu'utilise upstream), ou
 **réduction du périmètre** (les cores MAME pèsent ~2 h).
 
 ### 7.2 Espace disque — marge étroite
@@ -337,10 +372,10 @@ un paquet construit au job 2 dont la dépendance a été sautée au job 1 — et
 - `portaudio` — le fork `zhang-ray/portaudio` a été supprimé de GitHub ;
   basculé sur upstream v19.7.0 (décision validée, change le code compilé)
 
-### 7.5 Fusion `upstream/dev` — non faite
+### 7.5 Fusion `upstream/dev` — non faite, désormais possible
 
-19 commits de retard, 77 conflits. Décision prise d'attendre un build vert
-comme référence.
+19 commits de retard, 77 conflits. La condition posée — un build vert comme
+référence — est **remplie** depuis le run `37957287962`.
 
 **Attention** : upstream a **toujours les URLs cassées** pour `configtools`,
 `dav1d`, `x264`, `zlib` et `pulseaudio` — ses runners self-hosted ont les
@@ -357,9 +392,15 @@ attendrait 24 h pour rien.
 
 ## 8. Recommandations de maintenance
 
-1. **Ne pas relancer `bump_amberelec.sh` / `update_packages`** sans build vert
-   de référence. Ces scripts changent `PKG_VERSION` seul, ce qui est à
-   l'origine de la majorité des pannes documentées ici.
+1. **Les montées de version doivent se faire par petits lots, validés.** Les
+   scripts `bump_amberelec.sh` / `update_packages` changent `PKG_VERSION`
+   **seul**, alors qu'une version et ses patches forment un couple — c'est
+   l'origine de la majorité des pannes documentées ici. Un bump de 136 paquets
+   en une fois est invérifiable : la panne suivante coûte un build entier à
+   localiser. Procéder par lots de quelques paquets, chacun suivi d'un build,
+   et vérifier d'abord `git diff upstream/dev -- <dir>` — quand upstream a déjà
+   la version visée, son paquet complet (patches et logique de build inclus)
+   est préférable à un simple changement de `PKG_VERSION`.
 2. **Lancer `source-audit` avant un build long** — 10 min contre 6 h.
 3. **Face à un paquet qui casse, comparer d'abord à upstream** (`git diff
    upstream/dev -- <dir>`). C'est ce qui a résolu la majorité des cas. Vérifier
