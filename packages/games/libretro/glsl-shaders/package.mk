@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="glsl-shaders"
-PKG_VERSION="2b2c5ee3fd8e1a3884e20ed424fd9bfbc51cbb3d"
-PKG_SHA256="018c56817f5f2828821489871063609a097557948b295a3ca8c86cf9ac4379b7"
+PKG_VERSION="148ce728155232a6b63be772c1810bd84728f359"
+PKG_SHA256="9527fb74d4c7aba773b057a772db657246e0faebb19a8b17b5074f1aa6e9ac4d"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/libretro/glsl-shaders"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
