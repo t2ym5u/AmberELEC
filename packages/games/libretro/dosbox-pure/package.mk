@@ -3,8 +3,8 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="dosbox-pure"
-PKG_VERSION="a4a0bab7f8931433588f2fcad9045c85b277373d"
-PKG_SHA256="f0d04f087bb1c63a4cf1d46e314a9e0336afad427ddebbefde3daffe64b9005b"
+PKG_VERSION="cdaea10ce8cac231bc341ca05d4c5e4e5fe0fbd5"
+PKG_SHA256="c1c30bedc7254459d446047541570aad907252fdeb151daed2190ba64703ab97"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/dosbox-pure"
 PKG_URL="https://github.com/libretro/dosbox-pure/archive/${PKG_VERSION}.tar.gz"

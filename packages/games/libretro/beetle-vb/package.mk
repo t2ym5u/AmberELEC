@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="beetle-vb"
-PKG_VERSION="83ed42608601fb7b01d41e4f8fb2007a37b8c84e"
-PKG_SHA256="02630caca19b3e5ba4a1132c78cca7c2ac7238169f7014d8f345b86540ce4fc7"
+PKG_VERSION="851a4f38df8bb9d7854b35e82a5306a40db7e01c"
+PKG_SHA256="c44bcbeca4bb1411d3e940b761f996aa0b1bd2e7ba5b462b3f1d667e070f0e42"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/beetle-vb-libretro"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
