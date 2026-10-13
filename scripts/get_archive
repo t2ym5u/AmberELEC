@@ -53,6 +53,15 @@ case "${PKG_URL}" in
   *//download.savannah.gnu.org/releases/*|*//download.savannah.nongnu.org/releases/*)
     GNU_MIRROR="https://mirror.netcologne.de/savannah/${PKG_URL#*/releases/}"
     ;;
+  # download.samba.org has taken down three builds now, each time answering
+  # 503 or timing out for a stretch and serving normally soon after, with no
+  # entry on the LibreELEC mirror to fall back to. Three parallel device
+  # builds fetching it at once is enough to tip it over. gwdg is an official
+  # Samba mirror and serves the byte-identical tarball (checked against
+  # PKG_SHA256).
+  *//download.samba.org/pub/samba/*)
+    GNU_MIRROR="https://ftp.gwdg.de/pub/samba/${PKG_URL#*/pub/samba/}"
+    ;;
 esac
 [ "${VERBOSE}" != "yes" ] && WGET_OPT=-q
 WGET_CMD="wget --output-file=- --timeout=30 --tries=3 --passive-ftp --no-check-certificate -c ${WGET_OPT} --progress=bar:force --show-progress -O ${PACKAGE}"
