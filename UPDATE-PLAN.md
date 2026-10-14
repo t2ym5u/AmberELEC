@@ -69,6 +69,28 @@ Les 48 paquets sémantiques sans patches, **moins les 7 du lot 3**. Exemples :
 Faible risque : pas de patches à décaler, rayon d'impact limité, et upstream
 les compile déjà. **C'est le lot à faire en premier.**
 
+#### Vérification préalable — 45 candidats, 41 retenus
+
+Chaque candidat a été contrôlé comme les 47 paquets déjà synchronisés :
+upstream porte-t-il bien la version, et le fork a-t-il un commit manuel
+dessus depuis la divergence ? Quatre cas sont ressortis, et ils valident la
+méthode :
+
+| Paquet | Problème détecté | Décision |
+|---|---|---|
+| `readline` 8.0→8.3 | upstream utilise encore `ftpmirror.gnu.org`, le redirecteur mort | prendre la **version** upstream, garder **notre URL** |
+| `libidn2` 2.1.1a→2.3.8 | idem | idem |
+| `bash` 5.1.16→5.3 | upstream en `http://`, nous en `https://` | prendre la version, garder `https` |
+| `portaudio` | **faux positif** : upstream pointe `zhang-ray/portaudio`, dépôt **supprimé**. `sort -V` a classé le hash `64d1bf91…` après `19.7.0` | **exclu** — upstream est strictement moins bon |
+
+`nettle` était signalé pour la même raison mais son URL upstream est déjà
+identique à la nôtre : reversé dans le lot.
+
+C'est exactement le piège de §7.5 de `FORK-CHANGES.md` — synchroniser à
+l'aveugle régresserait les correctifs d'URL. Appliquer le lot paquet par
+paquet avec ce contrôle, jamais un `git checkout upstream/dev -- packages/`
+global.
+
 ### Lot 2 — paquets avec patches (≈ 19 paquets)
 
 `libunwind`, `memtester`, `SDL2`, `SDL2_ttf`, `e2fsprogs`, `parted`,
