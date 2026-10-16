@@ -192,8 +192,13 @@ runs:
           gh api "repos/${GITHUB_REPOSITORY}/actions/caches" --paginate \
             --jq ".actions_caches[]|select(.key|startswith(\"ccache-${{ inputs.device }}-\"))|.key" \
             2>/dev/null | grep -vFx "$keep" | sort -u | while read -r k; do
-              echo "deleting superseded $k"
-              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${k}" >/dev/null 2>&1 || true
+              # Say so when a delete is refused. Swallowing it is what let the
+              # quota overrun go unnoticed while the token was still read-only.
+              if gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${k}" >/dev/null 2>&1; then
+                echo "deleted superseded $k"
+              else
+                echo "WARNING: could not delete $k - needs actions:write"
+              fi
             done
 
           gh api "repos/${GITHUB_REPOSITORY}/actions/cache/usage" \
