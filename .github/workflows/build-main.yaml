@@ -47,6 +47,14 @@ concurrency:
   # Superseding immediately keeps the newest request the one that runs.
   cancel-in-progress: true
 
+# The repository hands workflows a read-only token by default, and deleting a
+# cache entry needs actions:write. Without it the prune step in build-device
+# fails silently behind its `|| true` and the superseded keys stay - which is
+# how the quota reached 12645 MB of 10240 even with pruning in place.
+permissions:
+  contents: read
+  actions: write
+
 env:
   # This is used by 'make docker-*' commands to determine image to build with.
   # This fork publishes no build image of its own and its Dockerfile trails
