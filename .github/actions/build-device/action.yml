@@ -79,9 +79,20 @@ runs:
           # compiling the mame cores evicted entries that were still needed and
           # the cache grew 4MB across a 5.5h job. Everything evicted gets
           # recompiled next run - mame2015/2016/2010 alone are ~112 minutes.
-          # 6G leaves room for a full device build; GitHub allows 10G per
-          # repository and evicts least-recently-used entries on its own.
-          export CCACHE_MAXSIZE=6G
+          #
+          # 6G hit the same wall one package later. RG351MP stopped at exactly
+          # package 443 of 460 on three consecutive runs, and 444 is mame,
+          # which took RG351V 137 minutes on its own - the 16 packages after it
+          # take two. So the device is not slow, it is one package short, and
+          # the cache ended those runs at 5.7G against the 6G cap: ccache was
+          # evicting while compiling mame, so mame's objects never survived to
+          # the next run and it recompiled cold every time.
+          #
+          # 9G lets them survive. The other three devices have their images and
+          # their caches are gone, so RG351MP can have the quota to itself;
+          # this needs revisiting when several devices are rebuilt for the
+          # version bumps, because 4 x 9G does not fit in 10G.
+          export CCACHE_MAXSIZE=9G
 
           # Two parallelism levels multiply: THREADCOUNT packages at once,
           # each with MAKEFLAGS=-j$(nproc) = 4. The nproc default meant ~16
@@ -122,7 +133,7 @@ runs:
           df -h / /mnt 2>/dev/null || true
           sudo du -sh /var/lib/docker 2>/dev/null || true
           du -sh "$HOME/.cache/amberelec-ccache" 2>/dev/null || true
-          docker run --rm -e CCACHE_DIR=/c -e CCACHE_MAXSIZE=6G \
+          docker run --rm -e CCACHE_DIR=/c -e CCACHE_MAXSIZE=9G \
             -v "$HOME/.cache/amberelec-ccache":/c \
             "${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}" \
             bash -c 'ccache -s 2>/dev/null | head -20' || true
