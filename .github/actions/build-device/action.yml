@@ -133,10 +133,21 @@ runs:
           df -h / /mnt 2>/dev/null || true
           sudo du -sh /var/lib/docker 2>/dev/null || true
           du -sh "$HOME/.cache/amberelec-ccache" 2>/dev/null || true
-          docker run --rm -e CCACHE_DIR=/c -e CCACHE_MAXSIZE=9G \
+
+          # ccache is not in the build image, it is built into the toolchain
+          # inside the device's build volume - so the previous form of this
+          # step was running a binary that does not exist and printing nothing
+          # behind its `|| true`. Five runs went by with no hit rate at all,
+          # which is why the cache was tuned on cache *size* instead, and that
+          # turned out to change nothing: RG351MP reached package 443 in 238
+          # minutes with a 4.8G cache and 240 with a 6.2G one.
+          docker run --rm -e CCACHE_DIR=/c \
             -v "$HOME/.cache/amberelec-ccache":/c \
+            -v "amberelec-build-${{ inputs.device }}":/build \
             "${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}" \
-            bash -c 'ccache -s 2>/dev/null | head -20' || true
+            bash -c 'cc=$(ls -1 /build/*/toolchain/bin/ccache 2>/dev/null | head -1);
+                     if [ -x "$cc" ]; then "$cc" -s; else echo "no ccache binary in the build volume"; fi' \
+            || echo "could not read ccache stats"
 
     # restore-keys picks the most recent matching cache, not the largest, so a
     # tiny one saved by a job that barely started will shadow a good one and the
