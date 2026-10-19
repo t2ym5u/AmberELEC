@@ -1,9 +1,25 @@
 name: update-dependencies
 
+# The weekly schedule is deliberately off. `make update` runs
+# scripts/update_packages, which rewrites PKG_VERSION and PKG_SHA256 and
+# nothing else - it does not touch the patches or the build logic that go
+# with a version. That dissociation is the single cause of this fork's
+# breakage: commits 8874e922, 5448b86f, d721f8a4, 36b7bc8c and 732bef50
+# bumped 136 packages that way while Actions were disabled, none of them
+# ever compiled, and recovering took weeks of six-hour builds.
+#
+# It has been failing on "Resource not accessible by integration" for want
+# of PR permission, which is the only reason it has not been reopening that
+# hole every Monday - it still pushed 20 update-dependencies-* branches.
+#
+# Upgrades now go through the batched route in UPDATE-PLAN.md: take the
+# whole package directory from upstream, which carries version, patches and
+# build logic together, and validate a batch with a build before the next.
+#
+# Left dispatchable, because the diff it produces is a useful signal of what
+# has moved upstream - just not something to merge unexamined.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 6 * * 1'
 
 permissions:
   contents: write
