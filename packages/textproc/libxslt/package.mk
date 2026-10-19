@@ -4,10 +4,10 @@
 
 PKG_NAME="libxslt"
 PKG_VERSION="1.1.33"
-PKG_SHA256="8e36605144409df979cab43d835002f63988f3dc94d5d3537c12796db90e38c8"
+PKG_SHA256="3944d3a74b4ca6b40f59967e2a587abc6994f6935d697d9fa1b8edd722513e90"
 PKG_LICENSE="MIT"
 PKG_SITE="http://xmlsoft.org/xslt/"
-PKG_URL="ftp://xmlsoft.org/libxml2/${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_URL="https://download.gnome.org/sources/libxslt/1.1/${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_DEPENDS_HOST="libxml2:host"
 PKG_DEPENDS_TARGET="toolchain libxml2"
 PKG_LONGDESC="A XSLT C library."

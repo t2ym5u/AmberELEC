@@ -4,10 +4,11 @@
 
 PKG_NAME="libxml2"
 PKG_VERSION="2.9.10"
+PKG_SHA256="593b7b751dd18c2d6abcd0c4bcb29efc203d0b4373a6df98e3a455ea74ae2813"
 #PKG_SHA256=""
 PKG_LICENSE="MIT"
 PKG_SITE="http://xmlsoft.org"
-PKG_URL="ftp://xmlsoft.org/libxml2/${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_URL="https://download.gnome.org/sources/libxml2/2.9/${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_DEPENDS_HOST="zlib:host"
 PKG_DEPENDS_TARGET="toolchain zlib"
 PKG_LONGDESC="The libxml package contains an XML library, which allows you to manipulate XML files."
