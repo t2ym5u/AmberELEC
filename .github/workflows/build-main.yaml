@@ -112,6 +112,15 @@ jobs:
            device_arg="${{ github.event.inputs.device }}"
            if [[ -n "$device_arg" && "$device_arg" != "all" ]]; then
                echo "devices=[\"$device_arg\"]" >> $GITHUB_OUTPUT
+           elif [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+               # A push builds one device, not four. The repository has 10 GB
+               # of Actions cache in total and a single device peaks at ~8.5 GB
+               # while both its keys exist, so four at once evict each other's
+               # caches and every one of them then builds from colder state -
+               # which is what kept RG351V and RG351MP from ever finishing.
+               # RG351P is the validation device: it builds the same 460
+               # packages as the rest and has the most history behind it.
+               echo 'devices=["RG351P"]' >> $GITHUB_OUTPUT
            else
                echo 'devices=["RG351P","RG351V","RG351MP","RG552"]' >> $GITHUB_OUTPUT
            fi
