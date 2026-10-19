@@ -2,7 +2,7 @@
 # Copyright (C) 2024-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="vircon32"
-PKG_VERSION="dd78c5cea1fcaa382b7492d0d813d6c1534914d7"
+PKG_VERSION="35a4042b06c30f232edb3f3abb47a10bcd8ec240"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/vircon32/vircon32-libretro"
 PKG_URL="${PKG_SITE}.git"
