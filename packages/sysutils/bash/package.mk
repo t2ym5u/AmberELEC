@@ -4,7 +4,7 @@
 # Copyright (C) 2022-present Fewtarius
 
 PKG_NAME="bash"
-PKG_VERSION="5.1.16"
+PKG_VERSION="5.3"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.gnu.org/software/bash/"
 PKG_URL="https://ftp.gnu.org/gnu/bash/${PKG_NAME}-${PKG_VERSION}.tar.gz"
