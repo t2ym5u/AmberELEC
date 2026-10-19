@@ -1,13 +1,18 @@
 # État du fork — modifications, causes, contournements
 
 Référence des changements apportés à `t2ym5u/AmberELEC` branche `dev` pour
-rendre le build RG351P fonctionnel sur GitHub Actions.
+rendre les builds fonctionnels sur GitHub Actions.
 
 - **Base** : `51ea20d8` (18/09/2026), dernier commit avant ces travaux
-- **Portée** : 59 commits, 126 fichiers
-- **État** : RG351P **compile et produit une image** (run `37957287962`, 4h49,
-  artefact de 949 Mo). RG351V / RG351MP / RG552 en cours de première validation.
 - **Upstream de référence** : `AmberELEC/AmberELEC@dev`
+- **État** : **les 4 devices produisent une image**
+
+| Device | Run | Durée | Artefact |
+|---|---|---|---|
+| RG351P | `37957287962` | 4h49 | 949 Mo |
+| RG552 | `38213191133` | 4h43 | 961 Mo |
+| RG351V | `38741140410` | 5h31 | 950 Mo |
+| RG351MP | `39208157743` | 4h33 | 950 Mo |
 
 ---
 
@@ -319,33 +324,110 @@ Versions upstream des patches, cohérentes avec les versions synchronisées.
 
 ## 7. Ce qui n'est pas résolu
 
-### 7.1 Durée du build — **résolu, mais sans marge**
+### 7.1 Durée du build — **résolu pour les 4 devices**
 
-RG351P tient désormais dans un job : **4h49** pour 400 paquets et l'image
-complète, sous le plafond de 6 h.
+Les quatre images sont produites. Durées du job qui aboutit :
 
-Ce qui a débloqué n'est pas un réglage mais l'**accumulation du ccache**
-(4,8 Go), enrichi run après run, y compris par ceux qui échouaient. Les deux
-derniers échecs de durée étaient en réalité masqués par le cache d'état
-corrompu (§2.6) : une fois celui-ci supprimé, le build est passé.
+| Device | Durée | Artefact |
+|---|---|---|
+| RG351P | 4h49 | 949 Mo |
+| RG552 | 4h43 | 961 Mo |
+| RG351V | 5h31 | 950 Mo |
+| RG351MP | **4h33** | 950 Mo |
 
-Leviers mesurés — à ne pas retenter :
+Ce qui débloque n'est pas un réglage mais l'**accumulation du ccache**,
+enrichi run après run — **y compris par les runs coupés au plafond**. C'est
+le mécanisme central et il est mesurable : temps mis par RG351MP pour
+atteindre le paquet 443, run après run.
+
+| Run | 443 atteint à |
+|---|---|
+| 2 | 240 min |
+| 3 | 238 min |
+| 4 | 233 → 224 min |
+| 5 | 213 min |
+| **6 (réussi)** | **154 min** |
+
+MAME suit la même courbe : 111 min au run réussi contre ~137 à froid. Un
+run tué à l'intérieur de MAME laisse ses objets compilés au suivant, qui
+entre donc plus loin. Six tentatives pour RG351MP, mais **chacune réduisait
+mécaniquement le travail de la suivante** — ce n'était pas du hasard.
+
+Santé du cache, enfin mesurée (§7.1.1) : **84 % de hits**.
+
+#### 7.1.1 Quatre hypothèses fausses, et ce qui les a démenties
+
+Ce point a coûté six runs ; les impasses sont documentées pour ne pas être
+refaites.
+
+| Hypothèse | Démentie par |
+|---|---|
+| RG351MP plafonne à 443 par lenteur générale | 443 est une **frontière** : le paquet 444 est `mame`, 137 min à lui seul, et les 16 suivants 2 min |
+| ccache évince MAME au plafond de 6 Go | agrandir à 9 Go n'a rien changé : **238 min avec 4,8 Go, 240 min avec 6,2 Go** |
+| RG351MP est un device plus lourd | jeux de paquets **identiques** à RG351V, `TARGET_CPU`/`CPU_FLAGS`/`FPU` identiques |
+| le clone de `libretro/mame` coûte les 137 min | 1,1 Go en superficiel / 1,8 Go complet, **14 s** — hors sujet |
+
+Le réglage sur la **taille** du cache visait une cible inexistante : ccache
+tient 84 % de hits, mais **21 % des appels au compilateur sont non
+cachables** (édition de liens), et configure/install/I-O ne sont pas
+accélérés du tout. D'où l'insensibilité totale à la taille.
+
+> **Cause de l'aveuglement** : l'étape « Compiler cache stats » lançait
+> `ccache -s` **dans l'image Docker**, où ccache n'existe pas — il est
+> construit dans le *toolchain*, à l'intérieur du volume de build. La
+> commande échouait à chaque run, masquée par un `|| true`. **Cinq runs sans
+> aucun taux de hit**, d'où des réglages à l'aveugle. Corrigé : l'étape
+> pointe désormais le binaire réel.
+>
+> Leçon transposable : un diagnostic avalé par `|| true` coûte plus cher que
+> l'erreur qu'il masque.
+
+#### 7.1.2 Quota de cache GitHub — 10 Go pour tout le dépôt
+
+Contrainte structurelle découverte en route : un dépôt dispose de **10 Go de
+cache Actions au total**, et GitHub évince à l'échelle du dépôt entier une
+fois le quota plein.
+
+Quatre devices × deux clés (préchauffe + build) n'y tiennent pas : les
+devices **s'évinçaient mutuellement**, chaque run repartant d'un cache plus
+froid que le précédent. Le quota était monté à **9933 Mo / 10240**, RG351V
+occupant à lui seul 6,1 Go sur trois clés dont deux périmées.
+
+Corrections, dans l'ordre où elles se sont avérées nécessaires :
+
+1. **Une seule clé par device** — suppression des clés périmées.
+2. **`permissions: actions: write`** — le dépôt délivre un jeton en lecture
+   seule, et supprimer un cache exige `actions:write`. Sans cela la purge
+   échouait **en silence** et le quota est remonté à 12645 Mo.
+3. **Purger *avant* d'envoyer**, pas après — à 5-6 Go par cache, ancienne +
+   nouvelle clé dépassent 10 Go à elles seules, donc l'envoi lui-même
+   déclenchait une éviction.
+4. **Un device à la fois** — chaque device culmine à ~8,5 Go pendant que ses
+   deux clés coexistent ; deux en parallèle refont déborder le quota.
+
+> ⚠️ **À revoir pour les montées de version** : 4 devices × ~6 Go ne tiennent
+> pas dans 10 Go. Rebuilder les 4 après un lot imposera soit de les
+> séquencer, soit d'accepter des caches froids.
+
+#### 7.1.3 Leviers mesurés — à ne pas retenter
 
 | Levier | Résultat mesuré |
 |---|---|
-| Cache ccache | +47 % puis saturé — mais c'est lui qui a débloqué |
-| 2ᵉ étage (préchauffe) | 382 paquets après 390 — aucun gain |
+| Cache ccache | **c'est le levier** — 84 % de hits, converge run après run |
+| Taille du cache (6 → 9 Go) | **aucun effet** — 238 min vs 240 min |
+| 2ᵉ étage (préchauffe) | aucun gain quand le cache est déjà chaud ; utile à froid |
 | `THREADCOUNT=3` | 382 en 6h03 vs 382 en 5h53 — aucun gain |
+| Profondeur de clone MAME | hors sujet — 14 s |
 | Cache d'état de build | **nuisible** — toolchain corrompu propagé (§2.6) |
 
-**La marge reste faible** (~1 h). Un cache vidé — GitHub évince après 7 jours
-d'inactivité — ramènerait un build à froid au-delà des 6 h. Dans ce cas,
+**La marge reste faible.** GitHub évince un cache après 7 jours
+d'inactivité ; un build à froid repasse au-delà de 6 h. Dans ce cas,
 dispatcher avec `warmup=true` : le premier étage reconstitue le cache, le
 second termine. C'est précisément le rôle du découpage.
 
 Si la marge devient structurellement insuffisante : **larger runner GitHub**
 (payant, ~÷2), **runner self-hosted** (ce qu'utilise upstream), ou
-**réduction du périmètre** (les cores MAME pèsent ~2 h).
+**réduction du périmètre** (MAME et ses cores pèsent ~2 h).
 
 ### 7.2 Espace disque — marge étroite
 
