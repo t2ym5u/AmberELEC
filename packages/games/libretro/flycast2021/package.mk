@@ -2,8 +2,8 @@
 # Copyright (C) 2021-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="flycast2021"
-PKG_VERSION="45bd2f4e59708a7c16a5bb1cb90a94d1b39e330d"
-PKG_SHA256="5ebf68c4548e5ba0521478f5172abd7f2ca5a3e15060cb78da011e3b03f3fb10"
+PKG_VERSION="6393a8a659e1189520cd9587795a97076349d93f"
+PKG_SHA256="42f00f95877edbbeb99a86a12c9788ba86be2722fe56acbe9470b99171afd5ad"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/flycast"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
