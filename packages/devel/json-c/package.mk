@@ -4,10 +4,11 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="json-c"
-PKG_VERSION="0.18-20240915"
-PKG_SHA256="3112c1f25d39eca661fe3fc663431e130cc6e2f900c081738317fba49d29e298"
+PKG_VERSION="0.19"
+PKG_SHA256="37ad0249902e301bd9052bf712e511fcc6acff4ecaad4b5900aad9ce564e26de"
 PKG_LICENSE="MIT"
 PKG_SITE="https://github.com/json-c/json-c"
-PKG_URL="https://github.com/json-c/json-c/archive/json-c-${PKG_VERSION}.tar.gz"
+PKG_URL="https://s3.amazonaws.com/json-c_releases/releases/json-c-${PKG_VERSION%-*}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain"
 PKG_LONGDESC="Implements a reference counting object model that allows you to easily construct JSON objects in C."
+PKG_TOOLCHAIN="cmake"
