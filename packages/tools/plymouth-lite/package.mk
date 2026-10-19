@@ -11,10 +11,6 @@ PKG_DEPENDS_INIT="toolchain ccache:init libpng"
 PKG_DEPENDS_TARGET="toolchain libpng"
 PKG_LONGDESC="Boot splash screen based on Fedora's Plymouth code"
 
-if [ "${UVESAFB_SUPPORT}" = yes ]; then
-  PKG_DEPENDS_INIT="${PKG_DEPENDS_INIT} v86d:init"
-fi
-
 pre_configure_target() {
   cd ${PKG_BUILD}
   rm -rf .${TARGET_NAME}-init

@@ -2,11 +2,11 @@
 # Copyright (C) 2019-present Shanti Gilbert (https://github.com/shantigilbert)
 
 PKG_NAME="empty"
-PKG_VERSION="0.6.20b"
-PKG_SHA256="7e6636e400856984c4405ce7bd0843aaa3329fa3efd20c58df8400a9eaa35f09"
+PKG_VERSION="0.6.23d"
+PKG_SHA256="9ad495d52b942e3fd858643536d8d12e282568214300954d4518d8c22b893585"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
-PKG_SITE="http://empty.sourceforge.net/"
+PKG_SITE="https://github.com/mezantrop/empty"
 PKG_DEPENDS_TARGET="toolchain linux"
 PKG_URL="http://downloads.sourceforge.net/sourceforge/${PKG_NAME}/${PKG_NAME}-${PKG_VERSION}.tgz"
 PKG_SECTION="sysutils"

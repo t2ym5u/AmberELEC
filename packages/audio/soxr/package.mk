@@ -12,7 +12,8 @@ PKG_DEPENDS_TARGET="toolchain cmake:host"
 PKG_LONGDESC="The SoX Resampler library performs one-dimensional sample-rate conversion. It may be used to resample PCM-encoded audio."
 PKG_BUILD_FLAGS="+pic"
 
-PKG_CMAKE_OPTS_TARGET="-DBUILD_EXAMPLES=OFF \
+PKG_CMAKE_OPTS_TARGET="-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+                       -DBUILD_EXAMPLES=OFF \
                        -DBUILD_SHARED_LIBS=OFF \
                        -DBUILD_TESTS=OFF \
                        -DWITH_OPENMP=OFF \
