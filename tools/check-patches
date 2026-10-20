@@ -1,0 +1,60 @@
+#!/bin/bash
+# Dry-runs a package's patch stack against the source its package.mk now
+# points at, the way scripts/unpack does it: every *.patch in order, with
+# GNU `patch -p1`, cumulatively - not each patch against a pristine tree.
+#
+# This exists because two six-hour builds were lost one package at a time to
+# the same thing: a version moved forward and a fork-local patch written for
+# the old source either no longer applied (parted, "Hunk #3 FAILED") or had
+# since been merged upstream (xmlstarlet, "Reversed ... Skipping patch").
+#
+# Runs GNU patch inside the AmberELEC build image, because macOS ships BSD
+# patch, which differs on fuzz and on reversed-patch detection - testing with
+# it produces failures the real build does not have, and vice versa.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+IMG="${DOCKER_IMAGE:-ghcr.io/amberelec/amberelec-build:latest}"
+WORK="${TMPDIR:-/tmp}/amberelec-patchcheck"
+mkdir -p "$WORK"
+cd "$ROOT" || exit 1
+
+status=0
+for f in "$@"; do
+  d=$(dirname "$f"); name=$(basename "$d")
+  patches=$(ls "$d"/patches/*.patch 2>/dev/null)
+  [ -z "$patches" ] && { printf '%-22s no patches\n' "$name"; continue; }
+
+  ver=$(grep -hE '^[[:space:]]*PKG_VERSION=' "$f" | head -1 | cut -d'"' -f2)
+  # PKG_URL interpolates PKG_SITE and the mirror vars, so evaluate the
+  # assignments rather than reading the literal string.
+  url=$(
+    export SOURCEFORGE_SRC="https://prdownloads.sourceforge.net"
+    export DISTRO_SRC="https://github.com/AmberELEC/AmberELEC"
+    eval "$(grep -E '^(PKG_NAME|PKG_VERSION|PKG_MAJOR|PKG_SITE|PKG_URL)=' "$f" | grep -v '\$(')" 2>/dev/null
+    printf '%s' "${PKG_URL}"
+  )
+  case "$url" in *'$'*|''|*.git) printf '%-22s SKIP (url: %s)\n' "$name" "${url:-none}"; continue ;; esac
+
+  src="$WORK/$name"
+  rm -rf "$src"; mkdir -p "$src"
+  if ! curl -sL --max-time 180 -o "$src/t.archive" "$url"; then
+    printf '%-22s SKIP (download failed)\n' "$name"; continue
+  fi
+  tar xf "$src/t.archive" -C "$src" 2>/dev/null || { printf '%-22s SKIP (not a tarball)\n' "$name"; continue; }
+  top=$(find "$src" -mindepth 1 -maxdepth 1 -type d | head -1)
+  [ -z "$top" ] && { printf '%-22s SKIP (no source dir)\n' "$name"; continue; }
+
+  out=$(docker run --rm -v "$top":/src -v "$ROOT/$d/patches":/p:ro "$IMG" \
+          bash -c 'cd /src; rc=0
+                   for p in /p/*.patch; do
+                     r=$(patch -p1 --dry-run --force < "$p" 2>&1) || { echo "FAIL $(basename $p)"; echo "$r" | grep -E "FAILED|Reversed|Skipping|No file" | head -3; rc=1; continue; }
+                     patch -p1 --force < "$p" >/dev/null 2>&1
+                   done; exit $rc' 2>&1)
+  if [ $? -eq 0 ]; then
+    printf '%-22s %-10s OK (%s patches)\n' "$name" "$ver" "$(echo "$patches"|wc -l|tr -d ' ')"
+  else
+    printf '%-22s %-10s ** PROBLEME **\n' "$name" "$ver"
+    echo "$out" | sed 's/^/      /'
+    status=1
+  fi
+done
+exit $status
