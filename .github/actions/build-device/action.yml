@@ -171,7 +171,15 @@ runs:
                  2>/dev/null || echo 0)
           best_mb=$(( ${best:-0} / 1024 / 1024 ))
           echo "this run: ${size}MB, best published: ${best_mb}MB"
-          if [ "$size" -ge "$best_mb" ]; then
+          # A floor as well as the comparison. With no cache published for a
+          # device, best_mb is 0 and "$size -ge 0" is true for an empty one -
+          # which is how a run cancelled in its first minute published two 0MB
+          # caches, and restore-keys takes the NEWEST match, so those would
+          # have shadowed any real cache for RG552 and RG351V.
+          if [ "$size" -lt 100 ]; then
+            echo "save=false" >> "$GITHUB_OUTPUT"
+            echo "only ${size}MB - too little to be worth publishing"
+          elif [ "$size" -ge "$best_mb" ]; then
             echo "save=true" >> "$GITHUB_OUTPUT"
           else
             echo "save=false" >> "$GITHUB_OUTPUT"
