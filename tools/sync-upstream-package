@@ -1,0 +1,48 @@
+#!/bin/bash
+# Takes a package directory from upstream as upstream actually has it.
+#
+# `git checkout upstream/dev -- <dir>` updates and adds files but never
+# removes ones upstream does not have, so a fork-local patch written for the
+# old version survives the bump and gets applied to a source that has moved.
+# That cost two validation builds: parted kept two patches written for 3.2
+# ("Hunk #3 FAILED") and xmlstarlet kept one that 1.7.0 had merged
+# ("Reversed ... Skipping patch").
+#
+# Upstream frequently deletes a patch in the same commit that bumps the
+# version - 5340bb72 dropped the patches of e2fsprogs, udevil and MC while
+# updating all three - so reproducing deletions is part of taking the version.
+#
+# Removing the directory first is what makes the result match upstream. Pass
+# --keep-url to preserve our PKG_URL, for the packages where upstream still
+# points at a host that no longer answers (ftpmirror.gnu.org and friends).
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+REF="${UPSTREAM_REF:-upstream/dev}"
+keep_url=no
+[ "$1" = "--keep-url" ] && { keep_url=yes; shift; }
+
+for d in "$@"; do
+  d="${d%/}"; d="${d%/package.mk}"
+  [ -d "$d" ] || { echo "skip $d (not a directory)"; continue; }
+  git ls-tree -d --name-only "$REF" "$d" >/dev/null 2>&1 || { echo "skip $d (absent upstream)"; continue; }
+
+  url=""
+  [ "$keep_url" = yes ] && url=$(grep -hE '^PKG_URL=' "$d/package.mk" 2>/dev/null || true)
+
+  before=$(git ls-files "$d" | wc -l | tr -d ' ')
+  git rm -rq --ignore-unmatch "$d"
+  git checkout "$REF" -- "$d"
+  after=$(git ls-files "$d" | wc -l | tr -d ' ')
+
+  if [ -n "$url" ]; then
+    python3 - "$d/package.mk" "$url" <<'PY'
+import sys, pathlib, re
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+p.write_text(re.sub(r'^PKG_URL=.*$', sys.argv[2].replace('\\', '\\\\'), s, count=1, flags=re.M))
+PY
+    echo "$d: $before -> $after files, PKG_URL kept"
+  else
+    echo "$d: $before -> $after files"
+  fi
+done
