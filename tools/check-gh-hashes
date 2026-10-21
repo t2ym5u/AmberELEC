@@ -1,0 +1,42 @@
+#!/bin/bash
+# Verifies PKG_SHA256 against what GitHub serves today for every package
+# fetched from a github.com /archive/ URL.
+#
+# Those tarballs are generated on demand, and their bytes are not stable:
+# flycast2021 failed its checksum because libretro renamed the repository,
+# so the archive's top-level directory went from flycast-<sha> to
+# parallel-dc-<sha> and the hash changed with it. Catching the rest of that
+# class in one pass beats finding them one six-hour build at a time.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT" || exit 1
+W="${1:-${TMPDIR:-/tmp}/amberelec-ghcheck}"; mkdir -p "$W"
+
+check_one() {
+  f="$1"; W="$2"
+  d=$(dirname "$f"); name=$(basename "$d")
+  url=$(
+    export SOURCEFORGE_SRC="https://prdownloads.sourceforge.net"
+    export DISTRO_SRC="https://github.com/AmberELEC/AmberELEC"
+    eval "$(grep -E '^(PKG_NAME|PKG_VERSION|PKG_MAJOR|PKG_SITE|PKG_URL)=' "$f" | grep -v '\$(')" 2>/dev/null
+    printf '%s' "${PKG_URL}"
+  )
+  case "$url" in *github.com/*/archive/*) : ;; *) return ;; esac
+  want=$(grep -hE '^PKG_SHA256=' "$f" | head -1 | cut -d'"' -f2)
+  [ -z "$want" ] && { echo "NOSHA   $name"; return; }
+
+  t="$W/$name.tgz"
+  code=$(curl -sL -o "$t" --max-time 240 -w '%{http_code}' "$url" 2>/dev/null)
+  [ "$code" != "200" ] && { echo "HTTP$code $name  $url"; return; }
+  got=$(shasum -a 256 "$t" | cut -d' ' -f1)
+  if [ "$got" = "$want" ]; then
+    echo "OK      $name"
+  else
+    top=$(tar tzf "$t" 2>/dev/null | head -1 | cut -d/ -f1)
+    echo "MISMATCH $name  attendu=${want:0:12} obtenu=${got:0:12}  racine=$top"
+  fi
+  rm -f "$t"
+}
+export -f check_one
+
+git grep -lE '^PKG_URL=.*github\.com.*archive' -- packages projects \
+  | xargs -P 12 -I{} bash -c 'check_one "$@"' _ {} "$W"

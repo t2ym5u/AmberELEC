@@ -3,10 +3,13 @@
 
 PKG_NAME="flycast2021"
 PKG_VERSION="45bd2f4e59708a7c16a5bb1cb90a94d1b39e330d"
-PKG_SHA256="5ebf68c4548e5ba0521478f5172abd7f2ca5a3e15060cb78da011e3b03f3fb10"
+PKG_SHA256="83434fa00b02f0188ec9225ee3a9c2133f7fcd3a323f00d160ff8f8f9aca4bae"
 PKG_LICENSE="GPLv2"
-PKG_SITE="https://github.com/libretro/flycast"
+PKG_SITE="https://github.com/libretro/parallel-dc"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
+# libretro renamed the repository; the generated tarball unpacks under the
+# new name, which is neither PKG_NAME nor the old one.
+PKG_SOURCE_DIR="parallel-dc-${PKG_VERSION}"
 PKG_DEPENDS_TARGET="toolchain ${OPENGLES}"
 PKG_LONGDESC="Flycast is a multiplatform Sega Dreamcast emulator"
 PKG_TOOLCHAIN="make"
