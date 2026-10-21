@@ -62,6 +62,18 @@ case "${PKG_URL}" in
   *//download.samba.org/pub/samba/*)
     GNU_MIRROR="https://ftp.gwdg.de/pub/samba/${PKG_URL#*/pub/samba/}"
     ;;
+  # GitHub generates /archive/ tarballs on demand and answers 404 - not 403
+  # or 429 - when that generation is throttled or briefly fails, so wget
+  # treats a healthy source as permanently missing. flycast2021 took a build
+  # down this way at package 332 of 460: the commit was reachable, the API
+  # returned it, and the same URL served 200 minutes later. codeload is the
+  # backend the github.com URL redirects to anyway, so asking it directly
+  # routes around the front end having a bad moment.
+  *//github.com/*/archive/*)
+    GNU_MIRROR="https://codeload.github.com/${PKG_URL#*//github.com/}"
+    GNU_MIRROR="${GNU_MIRROR/\/archive\//\/tar.gz\/}"
+    GNU_MIRROR="${GNU_MIRROR%.tar.gz}"
+    ;;
 esac
 [ "${VERBOSE}" != "yes" ] && WGET_OPT=-q
 WGET_CMD="wget --output-file=- --timeout=30 --tries=3 --passive-ftp --no-check-certificate -c ${WGET_OPT} --progress=bar:force --show-progress -O ${PACKAGE}"
