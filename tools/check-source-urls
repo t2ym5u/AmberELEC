@@ -1,0 +1,49 @@
+#!/bin/bash
+# Flags PKG_URLs that a liveness check would call healthy but a build cannot use.
+#
+# The case that prompted this: soundfont-generaluser fetched from a Dropbox
+# /s/ link. Dropbox stopped serving the file and started answering with its
+# "see this file" HTML page instead - HTTP 200, text/html, 198KB, and a
+# different sha256 on each request. scripts/get saw a successful download with
+# a bad checksum and retried, forever, against all three of its mirrors. The
+# build died in the image stage, an hour in, on a package that had been
+# "reachable" in every audit.
+#
+# So 200 is not the test; what the server hands back is. An HTML body where an
+# archive was asked for means the source is gone, whatever the status line says.
+#
+# Limits, so its output is read correctly: this resolves PKG_URL with a plain
+# eval and does NOT reproduce $DISTRO_SRC rewriting, the mirror at
+# sources.libreelec.tv that scripts/get falls back to, or the per-host
+# fallbacks in scripts/get_archive. Packages served by those legitimately show
+# up as 404 here. Treat the HTML lines as findings and the HTTP lines as a list
+# to check by hand. GitHub /archive/ URLs are skipped - tools/check-gh-hashes
+# covers those properly, by hashing them.
+cd "$(cd "$(dirname "$0")/.." && pwd)" || exit 1
+
+probe() {
+  f="$1"
+  name=$(basename "$(dirname "$f")")
+  url=$(
+    export SOURCEFORGE_SRC="https://prdownloads.sourceforge.net"
+    export DISTRO_SRC="https://github.com/AmberELEC/AmberELEC"
+    eval "$(grep -E '^(PKG_NAME|PKG_VERSION|PKG_MAJOR|PKG_SITE|PKG_URL)=' "$f" | grep -v '\$(')" 2>/dev/null
+    printf '%s' "${PKG_URL}"
+  )
+  case "$url" in
+    ""|*".git"|file://*) return ;;
+    *github.com/*/archive/*) return ;;
+  esac
+  read -r code ctype < <(curl -sIL --max-time 45 -o /dev/null \
+      -w '%{http_code} %{content_type}\n' "$url" 2>/dev/null | tail -1)
+  case "$code" in
+    200) case "$ctype" in
+           text/html*) echo "HTML    $name  $url" ;;
+         esac ;;
+    000|4*|5*) echo "HTTP$code $name  $url" ;;
+  esac
+}
+export -f probe
+
+git grep -lE '^PKG_URL=' -- packages projects | sort -u \
+  | xargs -P 16 -I{} bash -c 'probe "$@"' _ {} | sort
