@@ -162,7 +162,39 @@ dispatcher RG351V puis RG351MP annulait le premier : **un seul device pouvait
 tourner à la fois**. Le groupe est désormais `main-<device>` — les quatre
 builds coexistent, et redispatcher le *même* device supersède toujours.
 
-### 2.9 `tools/audit-sources` + workflow `source-audit`
+### 2.9 Deux façons d'annuler un build par accident
+
+Deux pièges découverts en poussant pendant qu'un build tournait. Les deux ont
+coûté un warm-up de 2 h 30.
+
+**`paths-ignore` regarde la poussée, pas le commit.** Le workflow ignore
+`**.md` et `docs/**`, donc on peut documenter sans relancer un build de 6 h.
+Mais le filtre s'applique à **l'ensemble des fichiers modifiés par la
+poussée** : un `git push` qui emporte deux commits de documentation *et* un
+commit touchant `tools/` n'est pas ignoré du tout. Avec
+`cancel-in-progress: true`, le run ainsi déclenché supersède celui qui tourne.
+
+> Règle : pousser la documentation **seule**, ou ajouter `[skip ci]` au message
+> si la poussée emporte autre chose.
+
+**`always()` faisait démarrer un build à l'annulation.** Le job `build` porte
+`always()` pour qu'un warm-up en échec obtienne quand même ses six heures.
+Mais `always()` maintient aussi le job en vie à travers une annulation, et la
+condition qui l'accompagnait — `needs.build-warmup.result != 'success'` — est
+satisfaite par `'cancelled'`. Annuler un run pendant son warm-up faisait donc
+l'inverse de ce qui était demandé : le warm-up s'arrêtait, et le build
+démarrait.
+
+C'est ainsi qu'un dispatch superflu, annulé une minute après sa création, est
+revenu sous la forme d'un **second build RG351P** en concurrence avec le vrai,
+sur le même cache de compilation. `gh run cancel` ne suffisait plus à l'en
+déloger : il a fallu `POST .../force-cancel`.
+
+Corrigé en excluant explicitement `'cancelled'` et en ajoutant `!cancelled()`.
+Un warm-up qui **échoue** n'est pas affecté : un échec n'est pas une
+annulation.
+
+### 2.10 `tools/audit-sources` + workflow `source-audit`
 
 Vérifie les 613 sources sans télécharger les contenus, en ~10 min. À lancer
 **depuis un runner cloud** : `gmplib.org` répond à une IP résidentielle et
