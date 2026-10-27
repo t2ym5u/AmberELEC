@@ -156,6 +156,47 @@ siennes.
 > gcc 15 est un **changement de comportement d'émulateur**, à arbitrer au cas
 > par cas, pas un réflexe.
 
+#### État : lot 3 préparé sur la branche `lot3-prep`
+
+Sept commits, chacun autonome, à poser un par un avec un build entre chaque.
+
+| Commit | Contenu | Vérifié |
+|---|---|---|
+| `o3` | `PKG_BUILD_FLAGS="+o3"` rendu effectif dans `config/functions` | substitution en place : **n'invalide pas le ccache** |
+| `CMAKE_POLICY_VERSION_MINIMUM` | export dans `scripts/build` | inoffensif sous cmake 3.28 — peut partir en avance |
+| **3a** | `Python3` 3.11.15, `ccache` 4.13.6, `binutils` 2.43 | patches OK (3 / 35 / —) |
+| **3b** | `cmake` 4.4.2 | somme + patch vérifiés deux fois |
+| **3c** | `gcc` 15.3.0 **+ `PKG_SHA256`** | 3 patches OK ; somme confirmée par deux miroirs **et la signature GNU** |
+| **3d** | `glib` 2.89.4, `boost` 1.92.0 | sommes OK ; options meson renommées reprises |
+| **3e** | les 7 prérequis C23 | patches OK |
+| **3f** | `gdb` 17.2, `poppler` 26.08.0 | patches OK |
+
+**Le lot 3e est le résultat le plus utile de cette préparation.** En cherchant
+les fonctions de build qu'upstream porte et pas nous, dix paquets sont
+ressortis avec un contournement gcc 15 — une norme C rabattue, ou une erreur
+C23 ramenée au rang d'avertissement :
+
+| Paquet | Contournement |
+|---|---|
+| `gmp` | `-std=gnu11`, `-Wno-error=implicit-function-declaration`, `-Wno-error=incompatible-pointer-types`, et `-Ofast` → `-O2` |
+| `ncurses` | `-Wno-incompatible-pointer-types -Wno-array-parameter` |
+| `lzdoom` | `-std=gnu17` |
+| `easyrpg` | `-Wno-template-body` *(drapeau gcc 15)* |
+| `flycast2021` | `-Wno-error=implicit-function-declaration` |
+| `freeimage` | `-std=gnu11 -Wno-error=implicit-function-declaration` |
+| `joyutils` | `-Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch` |
+| `SDL2` | `-Wno-error=incompatible-pointer-types -Wno-error=int-conversion` — **déjà dans le lot 2** |
+| `quasi88`, `libmali` | diffèrent aussi par la version → à arbitrer, pas à synchroniser |
+
+Ce ne sont pas des compléments au bump de `gcc`, ce sont ses **préconditions**.
+Sans eux, le bump échoue sur chacun à son tour, un build de 6 h par paquet.
+`gmp` est le cas le plus net : c'est une dépendance de construction de `gcc`,
+donc il échoue avant tout le reste.
+
+> **`gcc` n'avait aucune somme de contrôle**, ni ici ni chez upstream ni chez
+> LibreELEC. Le compilateur de toute la distribution était le seul paquet
+> récupéré sur parole. Corrigé dans le commit 3c.
+
 ---
 
 ## 4. Méthode par lot
