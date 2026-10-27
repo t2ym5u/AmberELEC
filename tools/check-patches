@@ -38,7 +38,15 @@ for f in "$@"; do
   url=$(
     export SOURCEFORGE_SRC="https://prdownloads.sourceforge.net"
     export DISTRO_SRC="https://github.com/AmberELEC/AmberELEC"
-    eval "$(grep -E '^(PKG_NAME|PKG_VERSION|PKG_MAJOR|PKG_SITE|PKG_URL)=' "$f" | grep -v '\$(')" 2>/dev/null
+    # Seven packages build their URL from the major.minor pair. Dropping every
+    # line with a command substitution skipped all of them, and a skipped
+    # package reads like a checked one - so provide the one helper they call
+    # rather than filter them out. Same two cases as config/functions.
+    get_pkg_version_maj_min() {
+      local v="${1:-${PKG_VERSION}}"
+      if [[ ${v} =~ ^[0-9A-Za-z]*\.[0-9A-Za-z]*\.[0-9A-Za-z]*$ ]]; then echo "${v%.*}"; else echo "${v}"; fi
+    }
+    eval "$(grep -E '^(PKG_NAME|PKG_VERSION|PKG_MAJOR|PKG_SITE|PKG_URL)=' "$f")" 2>/dev/null
     printf '%s' "${PKG_URL}"
   )
   case "$url" in *'$'*|''|*.git) printf '%-22s SKIP (url: %s)\n' "$name" "${url:-none}"; continue ;; esac
