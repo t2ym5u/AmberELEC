@@ -4,7 +4,11 @@
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
 PKG_NAME="gcc"
-PKG_VERSION="13.3.0"
+PKG_VERSION="15.3.0"
+# Neither upstream nor LibreELEC checksums gcc, so the compiler for the whole
+# distribution was the one 101MB tarball fetched on trust. Verified identical
+# from ftp.gnu.org and ftp.gwdg.de, and against the GNU signature.
+PKG_SHA256="fa59c1beef8995f27c4d71c1df227587189315d3e6faff1bb4306e61b0c530eb"
 PKG_LICENSE="GPL-2.0-or-later"
 PKG_SITE="https://gcc.gnu.org/"
 PKG_URL="https://ftp.gnu.org/gnu/gcc/${PKG_NAME}-${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.xz"
