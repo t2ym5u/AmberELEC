@@ -165,7 +165,7 @@ builds coexistent, et redispatcher le *même* device supersède toujours.
 ### 2.9 Deux façons d'annuler un build par accident
 
 Deux pièges découverts en poussant pendant qu'un build tournait. Les deux ont
-coûté un warm-up de 2 h 30.
+coûté le même warm-up, 37 minutes de compilation jetées.
 
 **`paths-ignore` regarde la poussée, pas le commit.** Le workflow ignore
 `**.md` et `docs/**`, donc on peut documenter sans relancer un build de 6 h.
@@ -187,8 +187,10 @@ démarrait.
 
 C'est ainsi qu'un dispatch superflu, annulé une minute après sa création, est
 revenu sous la forme d'un **second build RG351P** en concurrence avec le vrai,
-sur le même cache de compilation. `gh run cancel` ne suffisait plus à l'en
-déloger : il a fallu `POST .../force-cancel`.
+sur le même cache de compilation — et il a tourné 36 minutes avant d'être
+repéré. `gh run cancel` ne suffisait plus à l'en déloger : il a fallu
+`POST .../force-cancel`, et le correctif ci-dessus ne vaut que pour les runs
+suivants, pas pour celui déjà lancé.
 
 Corrigé en excluant explicitement `'cancelled'` et en ajoutant `!cancelled()`.
 Un warm-up qui **échoue** n'est pas affecté : un échec n'est pas une
