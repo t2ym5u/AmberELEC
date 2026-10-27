@@ -187,9 +187,19 @@ jobs:
     # Only when the warm-up did not finish the build itself - including when it
     # is skipped entirely, which is the warmup=false case. Re-running a build
     # the previous job already completed costs a runner and produces nothing.
+    #
+    # 'cancelled' is excluded as well, and that is not a nicety: cancelling a
+    # run used to start this job rather than stop it. always() keeps the job
+    # alive through the cancellation, the warm-up's result is then 'cancelled'
+    # which is != 'success', and a six-hour build begins on a run someone just
+    # asked to stop. That happened - a superfluous dispatch was cancelled and
+    # came back as a second RG351P build competing with the real one for the
+    # same compiler cache.
     if: >-
       always() && needs.build-init.result == 'success'
       && needs.build-warmup.result != 'success'
+      && needs.build-warmup.result != 'cancelled'
+      && !cancelled()
     timeout-minutes: 360
     runs-on: ubuntu-latest
     strategy:
