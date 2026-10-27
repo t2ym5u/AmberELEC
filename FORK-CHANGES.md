@@ -284,11 +284,55 @@ patches identiques ne disent rien sur leur applicabilité à une version bumpée
 | `amiberry` | `Could NOT find OpenGL (OPENGL_glx_LIBRARY)` — ces appareils utilisent OpenGL ES | Paquet upstream (révision 09/2025) + sous-paquet `libpcap` |
 | `yabasanshiroSA` | Patch `threads.h` inapplicable | `51ea20d8` avait repointé le dépôt sans ajuster les patches ; upstream utilise `sydarn/yabause` branche `pi4-update` avec les patches correspondants |
 | `tic-80` | `upload-pack: not our ref` sur `vendor/quickjs` | **Pas un problème de version** — upstream épingle le même commit quickjs. Corrigé dans `scripts/get_git` (§3) |
+| `soundfont-generaluser` | `FAILURE: scripts/install soundfont-generaluser has failed!` — échec à l'étage image, après 460/460 paquets compilés | Le partage Dropbox ne sert plus le fichier mais sa page HTML « voir ce fichier » : **HTTP 200**, `text/html`, 198 Ko, et un sha256 **différent à chaque tentative**. Le miroir LibreELEC répond 404. Passage à GeneralUser GS **2.0.3** depuis le dépôt GitHub de l'auteur, qui l'offre explicitement comme source d'empaquetage automatisé — cf. §5.4 |
 
 > Trois paquets (`doublecherrygb`, `fbneo`, `tic-80`) relèvent du même motif :
 > **le projet amont a gagné un fichier de build-system** (`CMakeLists.txt`,
 > `meson.build`), ce qui fait basculer `scripts/build` dans un répertoire
 > hors-source — et les chemins relatifs du `package.mk` cessent d'être valides.
+
+### 5.4 `soundfont-generaluser` — ce qu'une source morte peut cacher
+
+Ce paquet a traversé **tous** les audits de sources sans être inquiété, en
+étant totalement mort. La raison tient en une ligne : Dropbox répond `200`.
+
+Les audits posaient la question « cette URL est-elle joignable ? ». Dropbox
+servait sa page d'interstitiel HTML avec un code 200, donc la réponse était
+oui. `scripts/get` téléchargeait 198 Ko de HTML, constatait un checksum faux,
+et réessayait — sur les trois miroirs, en boucle, le sha256 changeant à chaque
+fois puisque la page est générée dynamiquement :
+
+```
+got 12a970898da2ccf4...  wanted 4203835164766f42...
+got 146bcd881091ae98...  wanted 4203835164766f42...
+got a11ef40f6fc89ccb...  wanted 4203835164766f42...
+```
+
+Le paquet n'étant que `PKG_TOOLCHAIN="manual"`, rien ne le construit : il n'est
+réclamé qu'à l'étage image. L'échec arrivait donc **après** les 460 paquets,
+une heure de build plus loin, sur le dernier obstacle avant l'artefact.
+
+D'où `tools/check-source-urls`, qui ne demande plus si l'hôte répond mais **ce
+qu'il renvoie**, et signale un corps HTML là où une archive était attendue.
+Passé sur l'arbre, le seul autre cas est `rtmpdump`, déjà servi par le miroir.
+
+**Effet de bord traité.** GeneralUser GS 2.x déplace deux choses, et la carte
+d'instruments timidity (`packages/tools/sound/timidity/config/GeneralUser.cfg`,
+générée pour 1.471) les référençait toutes les deux :
+
+| | 1.471 | 2.0.3 | Traitement |
+|---|---|---|---|
+| Kits de batterie en presets mélodiques | banque **127** | banque **120** | 11 lookups `%font` corrigés ; numéros de presets inchangés |
+| Percussions proprement dites | banque **128** | banque **128** | inchangé — les 13 kits répondent, vérifié |
+| 16 presets de variation GS | présents | consolidés | entrées laissées : timidity ignore un `%font` irrésolu et retombe sur la banque 0, ce que fait GS lui-même pour une variation absente |
+
+Vérifié contre la table de presets de 2.0.3 : **256 des 272** paires
+`banque:preset` de la carte résolvent exactement, les 16 restantes sont ces
+variations, et **les 13 drumsets résolvent tous**. Le nom installé reste
+`GeneralUser.sf2` — ni fluidsynth (lien symbolique) ni timidity ne suivent la
+version de la banque.
+
+---
 
 ---
 

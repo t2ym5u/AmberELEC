@@ -103,7 +103,7 @@ seule ligne `PKG_VERSION`.
 
 À découper en 2-3 sous-lots.
 
-### Lot 3 — toolchain et dépendances larges (7 paquets, **un build chacun**)
+### Lot 3 — toolchain et dépendances larges (9 paquets, **un build chacun**)
 
 | Paquet | Actuel | Upstream | Remarque |
 |---|---|---|---|
@@ -113,6 +113,8 @@ seule ligne `PKG_VERSION`.
 | `Python3` | 3.11.7 | 3.11.15 | correctif mineur, sûr |
 | `ccache` | 4.8.3 | 4.13.6 | touche la compilation de tout |
 | `boost` / `glib` | 1.82.0 / 2.78.3 | 1.92.0 / 2.89.4 | très largement dépendus |
+| `gdb` | 11.1 | **17.2** | **reporté du lot 1** : gdb 17.2 exige gcc 15 — « redeclaration of C++ built-in type 'bool' » sous gcc 13.3.0 |
+| `poppler` | 23.10.0 | **26.08.0** | **reporté du lot 1** : exige C++23 |
 
 `glibc` **n'est pas concerné** : 2.38 des deux côtés — sa divergence porte sur
 les patches, pas la version.
@@ -123,6 +125,36 @@ exactement le profil des cœurs d'émulateurs.
 
 **Un build dédié par paquet.** `Python3` peut passer en premier (correctif
 mineur), `gcc` et `cmake` en dernier et séparément.
+
+#### Couplages hors `package.mk` — à embarquer avec le lot
+
+Trois choses conditionnent ce lot et ne vivent dans aucun `package.mk`. Les
+oublier, c'est un build de 6 h perdu par oubli.
+
+| Couplage | Où | Pourquoi |
+|---|---|---|
+| `export CMAKE_POLICY_VERSION_MINIMUM="3.5"` | `scripts/build` (upstream : ligne 112) | **Obligatoire avec cmake 4**, qui refuse tout projet déclarant `cmake_minimum_required` < 3.5 — le profil exact des vieux cœurs libretro. Variable d'environnement globale, inoffensive sous cmake 3.28 : elle peut donc précéder le bump |
+| Drapeau `o3` | `config/functions` | `PKG_BUILD_FLAGS="+o3"` était **inerte** dans cet arbre : le lot 1 a pris le `package.mk` de `systemd` qui le porte, mais rien ne lisait le drapeau. Corrigé (branche `lot3-prep`) par substitution en place `-Ofast` → `-O3`, ce qui laisse les 459 autres lignes de commande identiques au bit près — donc **sans invalider le ccache** |
+| `-std=gnu17` par paquet | `package.mk` | gcc 15 compile en **C23 par défaut** : `bool`/`true`/`false` deviennent des mots réservés, les déclarations implicites et les conversions de pointeurs incompatibles deviennent des **erreurs**. Upstream ne fixe pas de standard global, il corrige paquet par paquet — trois de ces correctifs sont déjà ici (`git`, `libidn2`, `parallel-n64`), arrivés avec le lot 1 |
+
+#### Où se situe le risque réel
+
+L'arbre ne contient **aucun paquet propre au fork** : les 679 `package.mk`
+existent tous chez upstream. Comme upstream construit ces quatre mêmes
+appareils avec gcc 15.3.0, tout paquet identique à upstream est déjà prouvé.
+
+Le risque se réduit donc aux **181 paquets qui diffèrent**, et plus précisément
+aux **103 qui diffèrent par la version** — dont la grande majorité sont des
+cœurs libretro épinglés sur des commits plus anciens. C'est du code ancien
+compilé par un compilateur C23 : c'est là que les ruptures tomberont, et
+upstream n'a pas écrit de correctif pour *ces* révisions-là, seulement pour les
+siennes.
+
+> Conséquence de méthode : ce lot se fera en **plusieurs itérations**, chacune
+> révélant quelques paquets. Épingler les cœurs est la raison d'être du fork —
+> les faire avancer jusqu'aux révisions d'upstream pour contourner une rupture
+> gcc 15 est un **changement de comportement d'émulateur**, à arbitrer au cas
+> par cas, pas un réflexe.
 
 ---
 
