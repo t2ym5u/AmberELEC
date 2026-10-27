@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# env bash, not /bin/bash: macOS still ships bash 3.2 (frozen at GPLv2), which
+# does not have the substring and array syntax these use. Under it this script
+# does not die, it quietly produces wrong answers - check-patches reported
+# "SKIP (url: none)" for Python3, whose PKG_URL contains ${PKG_NAME::-1}, and a
+# skipped package reads exactly like a checked one in a list of results.
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+  echo "$(basename "$0"): needs bash 4+, found ${BASH_VERSION:-unknown}" >&2
+  exit 2
+fi
 # Verifies PKG_SHA256 against what GitHub serves today for every package
 # fetched from a github.com /archive/ URL.
 #
