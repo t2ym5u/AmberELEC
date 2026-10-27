@@ -18,3 +18,11 @@ PKG_CONFIGURE_OPTS_HOST="--enable-cxx --enable-static --disable-shared"
 pre_configure_host() {
   export CPPFLAGS="${CPPFLAGS} -fexceptions"
 }
+
+pre_configure_target() {
+  export CFLAGS=$(echo "${CFLAGS}" | sed -e 's/-Ofast/-O2/g')
+  export CXXFLAGS=$(echo "${CXXFLAGS}" | sed -e 's/-Ofast/-O2/g')
+  export CFLAGS="${CFLAGS} -std=gnu11 -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types"
+  export CXXFLAGS="${CXXFLAGS} -std=gnu++11"
+  export gmp_cv_c_long_long=yes
+}

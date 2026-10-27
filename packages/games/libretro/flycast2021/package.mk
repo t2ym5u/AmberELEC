@@ -7,9 +7,6 @@ PKG_SHA256="83434fa00b02f0188ec9225ee3a9c2133f7fcd3a323f00d160ff8f8f9aca4bae"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/parallel-dc"
 PKG_URL="${PKG_SITE}/archive/${PKG_VERSION}.tar.gz"
-# libretro renamed the repository; the generated tarball unpacks under the
-# new name, which is neither PKG_NAME nor the old one.
-PKG_SOURCE_DIR="parallel-dc-${PKG_VERSION}"
 PKG_DEPENDS_TARGET="toolchain ${OPENGLES}"
 PKG_LONGDESC="Flycast is a multiplatform Sega Dreamcast emulator"
 PKG_TOOLCHAIN="make"
@@ -22,12 +19,28 @@ pre_configure_target() {
   sed -i 's/define CORE_OPTION_NAME "reicast"/define CORE_OPTION_NAME "flycast2021"/g' core/libretro/libretro_core_option_defines.h
   sed -i 's/"Flycast"/"Flycast 2021"/g' core/libretro/libretro.cpp
   sed -i 's/RETRO_PIXEL_FORMAT_XRGB8888/RETRO_PIXEL_FORMAT_RGB565/g' core/libretro/libretro.cpp
-  PKG_MAKE_OPTS_TARGET="GIT_VERSION=${PKG_VERSION:0:7}"
+  export CFLAGS="${CFLAGS} -Wno-error=implicit-function-declaration"
 }
 
-pre_make_target() {
-  export BUILD_SYSROOT=${SYSROOT_PREFIX}
-  PKG_MAKE_OPTS_TARGET+=" ARCH=arm platform=arm64"
+make_target() {
+  local my_cc="${CC}"
+  local my_cxx="${CXX}"
+
+  if [ -n "${CCACHE_DIR}" ] && [ -x "${TOOLCHAIN}/bin/ccache" ]; then
+    my_cc="${TOOLCHAIN}/bin/ccache ${CC}"
+    my_cxx="${TOOLCHAIN}/bin/ccache ${CXX}"
+  fi
+
+  export BUILD_SYSROOT="${SYSROOT_PREFIX}"
+
+  make ARCH=arm \
+       platform=arm64 \
+       GIT_VERSION="${PKG_VERSION:0:7}" \
+       CC="${my_cc}" \
+       CXX="${my_cxx}" \
+       SHARED="-shared" \
+       LDFLAGS="${LDFLAGS}" \
+       ${MAKEFLAGS}
 }
 
 makeinstall_target() {
