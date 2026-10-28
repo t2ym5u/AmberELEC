@@ -238,7 +238,7 @@ l'amont s'est arrêté. Chacun demande donc un arbitrage propre, pas un bump.
 | Paquet | Version | Amont | Conclusion |
 |---|---|---|---|
 | `pcre` | 8.45 | fin de vie (2021) | **fait** — personne ne le liait, retiré (4a) |
-| `p7zip` | 16.02 | mort en 2016 | remplaçable par le 7-Zip officiel (4b) |
+| `p7zip` | 16.02 | mort en 2016 | **fait** — 7-Zip 26.05, construit et éprouvé localement (4b) |
 | `freeimage` | 3.18.0 | mort en 2018 | **aucune version plus récente n'existe** (4c) |
 | `distutilscross` | 0.1 | mort en 2012 | bloque Python ≥ 3.12 → lot 5 (4d) |
 | `plymouth-lite` | 0.6.0 | meego.com éteint | source auto-hébergée, sans urgence |
@@ -257,7 +257,7 @@ quatre paquets qui savent détecter PCRE le refusent nommément (`slang` et
 bibliothèque en fin de vie était compilée à chaque build pour n'être liée
 nulle part.
 
-#### 4b — `p7zip` → 7-Zip officiel
+#### 4b — `p7zip` → 7-Zip officiel *(fait, branche `lot4-prep`)*
 
 Debian (`trixie`), Fedora et Arch ont tous basculé : `p7zip` y est devenu un
 paquet de transition vers `7zip`. Le fork `jinfeihan57/p7zip` 17.05, souvent
@@ -281,6 +281,32 @@ historiques (`7z`, `7za`, `7zr`) en enveloppes — exactement ce que fait le
 paquet Debian — **sans toucher à un seul appelant**. Ce qui disparaît est le
 modèle à greffons de p7zip (`7z.so` et `Codecs/`), que rien ici n'utilise en
 dehors d'un commentaire dans `sanity_check.py`.
+
+La machine de travail étant arm64, `7zz` a pu être **construit nativement
+pour aarch64** dans un conteneur avant d'écrire le `package.mk` — les deux
+passes aboutissent dans un même arbre (`b/host`, `b/target`), le binaire est
+un ELF aarch64 lié dynamiquement et s'annonce `7-Zip (z) 26.05 (arm64) … ASM`.
+
+L'essai a trouvé ce qu'une relecture aurait manqué :
+
+```
+7za a -l -mx9 … -tzip
+Command Line Error: Unknown switch: -l
+```
+
+Le `-l` de p7zip (suivre les liens symboliques) n'existe pas dans `7zz` — la
+dépendance inverse exacte dont parle l'équipe LTS Debian. Il est retiré des
+deux appels de `scripts/install_addon`, et c'est le bon équivalent plutôt
+qu'un pis-aller : sans lui, l'archive donne au lien symbolique la taille de
+sa cible, donc `7zz` déréférence par défaut ce que p7zip ne faisait que sur
+demande. Les six autres appels ont été rejoués un par un sur le binaire
+construit et passent tous.
+
+Version retenue : **26.05** et non 26.04, dont les notes annoncent « some
+bugs and vulnerabilities were fixed » — ce binaire ouvre des archives
+fournies par l'utilisateur. `-Werror`, que porte le makefile d'amont, est
+retiré de la passe cible : il a sa place dans la CI de l'auteur, pas dans une
+distribution où gcc 15 arrive avec le lot 3.
 
 #### 4c — `freeimage` : il n'y a rien vers quoi monter
 
