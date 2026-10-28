@@ -8,7 +8,7 @@ PKG_LICENSE="GPL"
 PKG_SITE="http://www.midnight-commander.org/"
 PKG_URL="http://ftp.midnight-commander.org/mc-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_NAME="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_DEPENDS_TARGET="toolchain libtool:host gettext:host glib pcre slang"
+PKG_DEPENDS_TARGET="toolchain libtool:host gettext:host glib slang"
 PKG_LONGDESC="Midnight Commander is a visual file manager"
 PKG_TOOLCHAIN="configure"
 
