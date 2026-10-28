@@ -46,6 +46,16 @@ retoucher serait régresser.
 Le gisement réel est donc **les 62 paquets sémantiques**, où upstream est en
 avance et où son CI a déjà compilé ces versions.
 
+### Hors paquets : les actions GitHub *(fait le 28 octobre 2026)*
+
+Les onze actions utilisées par les workflows sont aussi des composants, et
+aucune n'avait bougé depuis la création du fork — `docker/login-action` était
+pinnée sur un SHA de 2021. Toutes montées, détail en §2.11 de
+`FORK-CHANGES.md`. Sans effet sur les paquets ni sur l'ordre des lots
+ci-dessous : les seuls workflows qui auraient pu souffrir du passage à Node 24
+sont ceux posés sur les runners auto-hébergés d'amont, qui ne tournent pas
+dans ce fork.
+
 ---
 
 ## 3. Lots proposés

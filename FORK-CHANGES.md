@@ -196,6 +196,43 @@ Corrigé en excluant explicitement `'cancelled'` et en ajoutant `!cancelled()`.
 Un warm-up qui **échoue** n'est pas affecté : un échec n'est pas une
 annulation.
 
+### 2.9bis Sauf qu'un timeout *est* une annulation
+
+La phrase ci-dessus est fausse, et elle a coûté un run entier.
+
+GitHub rapporte l'expiration de `timeout-minutes` avec la conclusion
+**`cancelled`**, pas `failure`. La garde `!= 'cancelled'` écrite en 2.9 pour
+qu'une annulation humaine ne relance pas six heures de build attrape donc
+aussi le cas pour lequel le repli avait été construit. L'étage
+warm-up → build ne pouvait pas fonctionner : soit le warm-up finissait tout,
+soit il était coupé et le repli refusait de partir.
+
+Run 40652630181 : warm-up de 5 h 54, cache publié à 3566 Mo avec les objets
+de mame dedans, cap de 350 min atteint — puis `build` et `build-finalize`
+`skipped`, et le run n'a rien produit.
+
+Plutôt que de relâcher la garde, l'ambiguïté est supprimée à la source. Un
+`input` `soft_timeout` sur l'action composite arrête la construction depuis
+l'intérieur de l'étape :
+
+```bash
+timeout --kill-after=5m "330m" make DOCKER_WORK_DIR=/work docker-RG351P
+```
+
+`set -e` transforme le code 124 en échec, donc le job se termine en
+`failure`. Le `timeout-minutes: 350` reste en filet 20 minutes plus loin, et
+`cancelled` retrouve son sens unique : un humain a appuyé sur Annuler.
+`--kill-after` parce que TERM n'est qu'une demande, qu'un éditeur de liens
+peut ignorer le temps qu'il faut pour dépasser le cap.
+
+Le job `build` ne reçoit pas de `soft_timeout` : aucun repli ne le suit, et
+ses étapes de sauvegarde de cache sont déjà en `if: always()` — c'est
+d'ailleurs ce qui a sauvé les 3566 Mo malgré l'annulation.
+
+> Contournement immédiat quand le cas se présente : redispatcher avec
+> `warmup=false`, qui saute entièrement l'étage et lance `build` sur le cache
+> que le warm-up vient de publier.
+
 ### 2.10 `tools/audit-sources` + workflow `source-audit`
 
 Vérifie les 613 sources sans télécharger les contenus, en ~10 min. À lancer
@@ -206,6 +243,53 @@ Encode deux pièges non évidents : `PKG_URL` interpole
 `PKG_SITE`/`SOURCEFORGE_SRC`/`DISTRO_SRC` (sans quoi l'hôte disparaît de l'URL),
 et `get_archive` dispose d'un repli mirroir — un paquet n'est cassé que si
 **les deux** échouent.
+
+### 2.11 Versions des actions
+
+Aucune des onze actions utilisées n'avait bougé depuis la création du fork ;
+plusieurs avaient sauté trois majeures, et `docker/login-action` était pinnée
+sur un SHA de 2021 (v1.10.0).
+
+| Action | Avant | Après |
+|---|---|---|
+| `actions/checkout` | v4 | v7 |
+| `actions/upload-artifact` | v4 | v7 |
+| `actions/download-artifact` | v4 | v8 |
+| `actions/cache/{restore,save}` | v4 | v6 |
+| `ncipollo/release-action` | v1.13.0 | v1.21.0 |
+| `softprops/action-gh-release` | v1 | v3 |
+| `peter-evans/repository-dispatch` | v3 | v4 |
+| `peter-evans/create-pull-request` | v5 | v8 |
+| `hmarr/debug-action` | v2 | v3 |
+| `docker/login-action` | v1.10.0 (SHA) | v4.7.0 (SHA) |
+
+Trois points vérifiés avant de bouger, parce qu'ils touchent le chemin qui
+livre réellement les images :
+
+- **`upload-artifact` v7 et `download-artifact` v8 forment une paire.** v7
+  ajoute l'envoi direct non zippé (`archive: false`) et v8 le pendant côté
+  téléchargement, qui inspecte le `Content-Type` avant de dézipper. Nos
+  artefacts restent zippés — `archive` n'est pas utilisé — donc le
+  comportement ne change pas ; v8 ajoute en prime l'échec sur un hash qui ne
+  correspond pas.
+- **`checkout` v7 bloque le checkout d'une PR de fork** sous
+  `pull_request_target` et `workflow_run`. Aucun workflow du dépôt n'utilise
+  l'un ou l'autre.
+- **`create-pull-request` v7 a retiré la variable `PULL_REQUEST_NUMBER`**, que
+  `update-dependencies.yaml` n'utilise pas.
+
+Toutes ces majeures passent le runtime à Node 24, qui demande un runner
+`>= 2.327.1`. Les runners hébergés en sont largement au-delà. Les workflows
+posés sur les labels auto-hébergés d'amont — `main` et `pr`, soit `build-pr`,
+`clean-pr`, `clean-main`, `clean-package` et `build-docker-image` — ne tournent
+pas dans ce fork faute de ces runners, donc la contrainte ne s'y applique pas
+aujourd'hui ; elle s'appliquerait à qui les rebrancherait.
+
+Pas de `dependabot.yml` ajouté : le dépôt porte déjà vingt branches
+`update-dependencies-*` abandonnées et le cron qui les produisait a été
+désactivé délibérément. Relancer une machine à PR irait contre ce choix. La
+commande qui a servi ici tient en une ligne et suffit à refaire le point :
+`grep -rhoE 'uses: [^@]+@\S+' .github/ | sort -u`.
 
 ---
 

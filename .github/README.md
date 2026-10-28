@@ -1,3 +1,25 @@
+> ### À propos de ce dépôt
+>
+> Ceci est un **fork** de [`AmberELEC/AmberELEC`](https://github.com/AmberELEC/AmberELEC),
+> maintenu pour remettre la construction en état et reprendre les montées de
+> version laissées en suspens. Le README ci-dessous est celui d'amont et décrit
+> la distribution elle-même ; les badges pointent vers les versions publiées par
+> le projet d'origine, pas par ce fork.
+>
+> Ce qui est propre à ce dépôt :
+>
+> | Document | Contenu |
+> |---|---|
+> | [`CHANGELOG.md`](../CHANGELOG.md) | ce qui a changé, dans l'ordre |
+> | [`FORK-CHANGES.md`](../FORK-CHANGES.md) | pourquoi — diagnostics, causes, contournements |
+> | [`UPDATE-PLAN.md`](../UPDATE-PLAN.md) | ce qui reste à faire, par lots |
+>
+> La différence pratique la plus visible : la CI tourne ici sur des runners
+> GitHub hébergés, là où amont utilise ses propres machines. Un build complet
+> prend environ six heures par appareil, ce qui dépasse la durée maximale d'un
+> job — d'où le découpage en un étage de préchauffage du cache de compilation
+> suivi d'un étage de construction.
+
 ![GitHub-Mark-Dark](https://raw.githubusercontent.com/AmberELEC/website/gh-pages/docs/images/transparent_amber_elec_horiz.svg#gh-dark-mode-only)
 ![GitHub-Mark-Light](https://raw.githubusercontent.com/AmberELEC/website/gh-pages/docs/images/transparent_black_amber_elec_horiz.svg#gh-light-mode-only)
 [![GitHub Release](https://img.shields.io/github/release/AmberELEC/AmberELEC.svg?label=latest%20release&style=flat-square&labelColor=black&color=gold)](https://github.com/AmberELEC/AmberELEC/releases/latest)
