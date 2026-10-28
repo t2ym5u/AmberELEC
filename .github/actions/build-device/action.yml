@@ -53,7 +53,7 @@ runs:
     # no exact key matches, which is the normal case - the exact key is unique
     # per job so that saving never collides.
     - name: Restore compiler cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: ~/.cache/amberelec-ccache
         key: ccache-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
@@ -237,7 +237,7 @@ runs:
     # already compiled.
     - name: Save compiler cache
       if: always() && steps.cache_check.outputs.save == 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v6
       with:
         path: ~/.cache/amberelec-ccache
         key: ccache-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
