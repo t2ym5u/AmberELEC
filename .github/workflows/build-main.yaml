@@ -142,6 +142,14 @@ jobs:
     # then read 'success' and wrongly skip the fallback, producing nothing.
     # Without it the result is unambiguous; the cost is only that the run shows
     # as failed when this stage is cut short, which is accurate anyway.
+    #
+    # 350 is now only a backstop. soft_timeout below stops the build 20 minutes
+    # earlier from inside the step, because reaching THIS cap does not report
+    # as 'failure' - GitHub cancels the job and the conclusion reads
+    # 'cancelled', which the job below treats as "a human stopped this" and
+    # skips. That is not a theory: run 40652630181 warmed the cache for 5h54,
+    # reached this cap, published 3566MB with mame in it, and then 'build' was
+    # skipped and the run produced nothing.
     timeout-minutes: 350
     runs-on: ubuntu-latest
     strategy:
@@ -157,6 +165,7 @@ jobs:
         with:
           device: ${{ matrix.device }}
           version: ${{ needs.build-init.outputs.version }}
+          soft_timeout: 330
       # This stage was built to be cut short, but with a warm cache it can now
       # finish the whole build - one did, image and all, and the result was
       # thrown away because only the job below published anything. If it got

@@ -11,6 +11,16 @@ inputs:
   version:
     description: Version string stamped into the image
     required: true
+  soft_timeout:
+    description: >
+      Minutes after which the build is stopped from inside the step, so the job
+      ends as 'failure'. Empty means no limit. This exists because a job that
+      runs out of 'timeout-minutes' is reported with conclusion 'cancelled',
+      not 'failure' - indistinguishable from a human pressing Cancel, and the
+      fallback job keys off exactly that distinction. Set this below the job's
+      own cap and the distinction holds.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -105,7 +115,15 @@ runs:
           # 2, which is the fastest setting that has not killed a runner.
           export THREADCOUNT=2
 
-          make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
+          # --kill-after because TERM alone is a request: make forwards it, but
+          # a compiler mid-link can sit on it, and the whole point is to be out
+          # of the step before the job's own cap turns this into 'cancelled'.
+          if [ -n "${{ inputs.soft_timeout }}" ]; then
+            timeout --kill-after=5m "${{ inputs.soft_timeout }}m" \
+              make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
+          else
+            make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
+          fi
 
     # Killing the build step does not stop the container it started, which keeps
     # writing into the ccache directory. tar then aborts with "file changed as
