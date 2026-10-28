@@ -229,6 +229,86 @@ coûte un build de 6 h.
 
 ---
 
+### Lot 4 — paquets morts, et ce qui les remplace
+
+Les sept paquets restés en arrière ne sont **pas** un retard du fork :
+upstream porte exactement les mêmes versions. Ce sont des projets dont
+l'amont s'est arrêté. Chacun demande donc un arbitrage propre, pas un bump.
+
+| Paquet | Version | Amont | Conclusion |
+|---|---|---|---|
+| `pcre` | 8.45 | fin de vie (2021) | **fait** — personne ne le liait, retiré (4a) |
+| `p7zip` | 16.02 | mort en 2016 | remplaçable par le 7-Zip officiel (4b) |
+| `freeimage` | 3.18.0 | mort en 2018 | **aucune version plus récente n'existe** (4c) |
+| `distutilscross` | 0.1 | mort en 2012 | bloque Python ≥ 3.12 → lot 5 (4d) |
+| `plymouth-lite` | 0.6.0 | meego.com éteint | source auto-hébergée, sans urgence |
+| `bluetool` | 0.2.3 | PyPI, dernier envoi 2019 | à évaluer au runtime |
+| `tcpbridge` | 1.1.1 | idem, tiré par `bluetool` | idem |
+
+#### 4a — `pcre` retiré *(fait, branche `lot4-prep`)*
+
+Deux paquets le déclaraient, aucun ne s'en servait. `git` 2.55 a **supprimé**
+`--with-libpcre1` de son `configure.ac` (il émet une erreur si on le passe) et
+`--with-libpcre2` vaut NO par défaut. `MC` choisit son moteur dans
+`mc-check-search-type.m4`, dont le cas « aucune option passée » vaut
+`glib-regexp` — et depuis glib 2.73, GRegex repose lui-même sur PCRE2. Les
+quatre paquets qui savent détecter PCRE le refusent nommément (`slang` et
+`swig` par `--without-pcre`, `systemd` par `-Dpcre2=disabled`). Une
+bibliothèque en fin de vie était compilée à chaque build pour n'être liée
+nulle part.
+
+#### 4b — `p7zip` → 7-Zip officiel
+
+Debian (`trixie`), Fedora et Arch ont tous basculé : `p7zip` y est devenu un
+paquet de transition vers `7zip`. Le fork `jinfeihan57/p7zip` 17.05, souvent
+cité, n'a plus de commit de fond depuis décembre 2022 — ce n'est pas un amont
+vivant, seulement un palier.
+
+Les appels sont peu nombreux et tous en ligne de commande, donc portables :
+
+| Appelant | Appel |
+|---|---|
+| `sanity_check.py` | `/usr/bin/7z l -slt <archive>` |
+| `runemu.py:101` | `/usr/bin/7z e -o<dir> <archive> <membre>` |
+| `scripts/install_addon` | `${TOOLCHAIN}/bin/7za a -tzip …` |
+| `MC` (`mc.ext`, `mc.menu`) | `7za l`, `7za a -si`, `7za e -so` |
+| `Skyscraper`, `virtual/toolchain` | dépendance `p7zip:host` |
+| `emulationstation` | dépendance cible |
+
+Le binaire officiel s'appelle `7zz` et accepte les mêmes commutateurs. La
+migration consiste donc à construire `7zz` et à poser les trois noms
+historiques (`7z`, `7za`, `7zr`) en enveloppes — exactement ce que fait le
+paquet Debian — **sans toucher à un seul appelant**. Ce qui disparaît est le
+modèle à greffons de p7zip (`7z.so` et `Codecs/`), que rien ici n'utilise en
+dehors d'un commentaire dans `sanity_check.py`.
+
+#### 4c — `freeimage` : il n'y a rien vers quoi monter
+
+3.18.0 est la **dernière version publiée**, en juillet 2018 ; le projet est
+arrêté et Debian l'a retiré de `testing`. Il n'existe donc pas de montée de
+version possible, et le remplacer supposerait de modifier le fork
+`AmberELEC/emulationstation`, qui en fait une dépendance CMake dure — hors du
+périmètre d'une passe de montée de versions.
+
+Ce qui reste faisable, par ordre de coût : reprendre la pile de correctifs que
+Debian portait avant le retrait, ou laisser en l'état en connaissance de
+cause. Les CVE visent des décodeurs de formats exotiques (PSD, XPM, TIFF),
+atteignables uniquement par une image fournie par l'utilisateur — jaquettes
+scrapées ou thème.
+
+#### 4d — `distutilscross` : le verrou Python 3.11
+
+`distutilscross` 0.1 (2012) rapièce `distutils`, que **Python 3.12 a supprimé
+de la bibliothèque standard**. C'est la raison pour laquelle le lot 3a reste
+dans la série 3.11 et ne va pas au-delà.
+
+Quatre paquets en dépendent : `SDL2:host`, `Pillow`, `pycryptodome`,
+`simplejson`. Les sortir demande de reprendre leur méthode de construction —
+`crossenv`, maintenu, est le chemin usuel. C'est un lot à part entière, et
+le seul qui débloque Python 3.12/3.13.
+
+---
+
 ## 4. Méthode par lot
 
 1. `git diff upstream/dev -- <dir>` — si upstream porte la version visée,
