@@ -158,7 +158,7 @@ siennes.
 
 #### État : lot 3 préparé sur la branche `lot3-prep`
 
-Sept commits, chacun autonome, à poser un par un avec un build entre chaque.
+Huit commits, chacun autonome, à poser un par un avec un build entre chaque.
 
 | Commit | Contenu | Vérifié |
 |---|---|---|
@@ -170,6 +170,7 @@ Sept commits, chacun autonome, à poser un par un avec un build entre chaque.
 | **3d** | `glib` 2.89.4, `boost` 1.92.0 | sommes OK ; options meson renommées reprises |
 | **3e** | les 7 prérequis C23 | patches OK |
 | **3f** | `gdb` 17.2, `poppler` 26.08.0 | patches OK |
+| **3g** | `libmali` 00aa2ae4, `quasi88` + contournement | somme `libmali` vérifiée (691,9 Mo) ; diff amont = 2 blobs g52 |
 
 **Le lot 3e est le résultat le plus utile de cette préparation.** En cherchant
 les fonctions de build qu'upstream porte et pas nous, dix paquets sont
@@ -186,12 +187,41 @@ C23 ramenée au rang d'avertissement :
 | `freeimage` | `-std=gnu11 -Wno-error=implicit-function-declaration` |
 | `joyutils` | `-Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch` |
 | `SDL2` | `-Wno-error=incompatible-pointer-types -Wno-error=int-conversion` — **déjà dans le lot 2** |
-| `quasi88`, `libmali` | diffèrent aussi par la version → à arbitrer, pas à synchroniser |
+| `quasi88`, `libmali` | diffèrent aussi par la version → arbitrés dans le **3g**, voir ci-dessous |
 
 Ce ne sont pas des compléments au bump de `gcc`, ce sont ses **préconditions**.
 Sans eux, le bump échoue sur chacun à son tour, un build de 6 h par paquet.
 `gmp` est le cas le plus net : c'est une dépendance de construction de `gcc`,
 donc il échoue avant tout le reste.
+
+##### Les deux arbitrages du 3g
+
+Prendre le fichier d'upstream aurait déplacé la version en même temps que le
+contournement. Les deux cas vont en sens opposés :
+
+| | Nous | Upstream | Décision |
+|---|---|---|---|
+| `libmali` | `9b1375cf` (2022-02-28) | `00aa2ae4` (2026-10-11) | **pris entier** |
+| `quasi88` | `459bbc6e` (2026-09-06) | `b5a0e044` (2026-07-22) | **notre version gardée**, contournement ajouté |
+
+`libmali` : un seul commit nous sépare, et la comparaison GitHub dit qu'il
+ajoute deux fichiers et ne touche à rien d'autre —
+`lib/{aarch64-linux-gnu,arm-linux-gnueabihf}/libmali-bifrost-g52-g29p1.so`.
+`MALI_FAMILY` vaut `g31` sur RG351P/V/MP et `t86x` sur RG552 : aucun appareil
+ne lit ces blobs, et `PKG_PATCH_DIRS` sélectionne par famille, donc le
+répertoire de patches `g52` qui les accompagne n'est jamais ouvert. Nos
+patches `g31` et `t86x` sont identiques au bit près à ceux d'upstream. Le bump
+est donc inerte pour les quatre appareils, et apporte la partie qui ne l'est
+pas : `-Dc_std=gnu11` / `-Dcpp_std=gnu++11`, sans quoi la construction meson
+échoue sous gcc 15.
+
+`quasi88` : l'inverse, nous sommes en avance et synchroniser aurait été une
+régression. Des trois commits qui nous séparent, un seul touche aux normes C
+— « libretro: define gnu17 on vita » — et il vise une plateforme qui n'est pas
+la nôtre. Le contournement reste donc nécessaire. `-Wno-error=` ne peut que
+ramener une erreur au rang d'avertissement : le porter sur une source qui n'en
+a plus besoin ne coûte rien, ne pas le porter sur une source qui en a besoin
+coûte un build de 6 h.
 
 > **`gcc` n'avait aucune somme de contrôle**, ni ici ni chez upstream ni chez
 > LibreELEC. Le compilateur de toute la distribution était le seul paquet

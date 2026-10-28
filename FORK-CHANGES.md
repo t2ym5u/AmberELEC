@@ -444,6 +444,7 @@ refaites.
 | ccache évince MAME au plafond de 6 Go | agrandir à 9 Go n'a rien changé : **238 min avec 4,8 Go, 240 min avec 6,2 Go** |
 | RG351MP est un device plus lourd | jeux de paquets **identiques** à RG351V, `TARGET_CPU`/`CPU_FLAGS`/`FPU` identiques |
 | le clone de `libretro/mame` coûte les 137 min | 1,1 Go en superficiel / 1,8 Go complet, **14 s** — hors sujet |
+| un job muet pendant 1 h 47 est bloqué | la sortie de **chaque paquet est tamponnée et vidée d'un coup à sa fin** : les dizaines de lignes `libtool: compile` de `linux-pam` portent toutes l'horodatage `16:27:15.80…`, une seule rafale juste avant `[441/460] [DONE]`. Le silence veut dire « un paquet est en cours », jamais « rien ne se passe » |
 
 Le réglage sur la **taille** du cache visait une cible inexistante : ccache
 tient 84 % de hits, mais **21 % des appels au compilateur sont non
@@ -459,6 +460,13 @@ accélérés du tout. D'où l'insensibilité totale à la taille.
 >
 > Leçon transposable : un diagnostic avalé par `|| true` coûte plus cher que
 > l'erreur qu'il masque.
+
+> **Corollaire sur la lecture des logs en direct.** Le `Last-Modified` du blob
+> de log dit quand le runner a écrit pour la dernière fois, pas où en est le
+> build. Le run `40497690702` est resté sans un octet de 16:29:38 à
+> l'annulation à 18:16:20 — 1 h 47 — alors qu'il compilait `mame` tout du
+> long. Pour savoir où en est un job, lire le dernier `[n/460] [DONE]`, pas
+> l'horodatage du dernier octet.
 
 #### 7.1.2 Quota de cache GitHub — 10 Go pour tout le dépôt
 
