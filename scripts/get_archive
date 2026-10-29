@@ -74,6 +74,18 @@ case "${PKG_URL}" in
     GNU_MIRROR="${GNU_MIRROR/\/archive\//\/tar.gz\/}"
     GNU_MIRROR="${GNU_MIRROR%.tar.gz}"
     ;;
+  # pyropus.ca answers 502 to everything from here and from a second sandbox,
+  # for both the plain host and the trailing-dot form its own redirect uses
+  # (https://pyropus.ca./software/...), which is what Arch fetches. The site
+  # is not abandoned - memtester 4.7.1 is current and its certificate was
+  # renewed this month - so this is a reachability problem, not a dead
+  # upstream, and it leaves the build depending on the LibreELEC mirror
+  # happening to carry a tarball LibreELEC has no use for. Debian's pool
+  # serves the byte-identical file: sha256 e427de66... on both, matching
+  # PKG_SHA256.
+  *//pyropus.ca*/software/memtester/*)
+    GNU_MIRROR="https://deb.debian.org/debian/pool/main/m/memtester/memtester_${PKG_VERSION}.orig.tar.gz"
+    ;;
 esac
 [ "${VERBOSE}" != "yes" ] && WGET_OPT=-q
 WGET_CMD="wget --output-file=- --timeout=30 --tries=3 --passive-ftp --no-check-certificate -c ${WGET_OPT} --progress=bar:force --show-progress -O ${PACKAGE}"
