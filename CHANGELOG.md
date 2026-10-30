@@ -20,12 +20,11 @@ utilisable à la fois.
 
 | Branche | Contenu | Commits |
 |---|---|---|
-| `lot2-prep` | paquets porteurs de patches | 1 |
 | `lot3-prep` | toolchain et dépendances larges | 8 |
 | `lot4-prep` | paquets morts et leurs remplaçants | 2 |
 
-`lot4-prep` est basé sur `lot2-prep` et doit donc atterrir après lui. Ordre
-prévu : `lot2` → `lot3` → `lot4`, un build par étape.
+Ordre prévu : `lot3` → `lot4`, un build par étape. `lot4-prep` porte encore
+l'ancien commit du lot 2 et devra être rebasé sur `dev` avant d'atterrir.
 
 ### Lot 4 — paquets morts
 
@@ -40,6 +39,35 @@ prévu : `lot2` → `lot3` → `lot4`, un build par étape.
   révélé le seul vrai piège : `7zz` ne connaît pas le `-l` de p7zip, et le
   retirer est l'équivalent exact puisque `7zz` déréférence les liens
   symboliques par défaut.
+
+---
+
+## 2026-10-30 — Lot 2 : les paquets porteurs de patches
+
+Validé par un build RG351P complet (run 41015343552).
+
+### Mis à jour
+
+- `libunwind` 1.6.2 → 1.8.2, `memtester` 4.5.0 → 4.7.1, `SDL2` 2.32.4 →
+  2.32.10, `SDL2_ttf` 2.22.0 → 2.24.0, `e2fsprogs` 1.45.3 → 1.47.4, `strace`
+  5.10 → 6.15, `MC` 4.8.22 → 4.8.33, et `udevil` 0.4.4 → `arnie97/udevil-ng`,
+  l'amont d'origine étant mort en 2015. Chaque répertoire pris entier chez
+  upstream, patches compris, et les cinq piles restantes rejouées contre les
+  nouvelles sources avant le build.
+
+### Modifié
+
+- **ext4 retrouve `64bit` dans ses options par défaut.** Le patch d'e2fsprogs
+  qui l'en retirait, hérité de 351ELEC, disparaît avec la montée de version,
+  comme chez upstream. Les systèmes de fichiers créés sont désormais ceux
+  qu'upstream livre sur les mêmes appareils.
+
+### Coût
+
+Le build a demandé deux runs. Monter SDL2 invalide le cache de compilation de
+tout ce qui l'inclut, et mame — 1 h 50 à lui seul avec un cache chaud — a été
+recompilé presque de zéro : le premier run s'est arrêté deux fois sur lui, à
+442 paquets sur 459, et le second a fini en 4 h 38 sur le cache accumulé.
 
 ---
 

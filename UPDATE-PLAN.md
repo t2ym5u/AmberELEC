@@ -113,6 +113,18 @@ seule ligne `PKG_VERSION`.
 
 À découper en 2-3 sous-lots.
 
+#### État : fait le 30 octobre 2026
+
+Huit paquets en un seul commit, validés par le run RG351P 41015343552.
+Aucun n'a échoué ; le seul coût imprévu est venu de `SDL2`, dont la montée
+invalide le ccache de mame et de tout ce qui inclut ses en-têtes. Le premier
+run s'est arrêté deux fois sur mame, à 442/459, et il a fallu un second run
+sans warm-up pour finir sur le cache accumulé.
+
+> Pour la suite : un paquet très largement inclus coûte un run de plus, même
+> sans rien casser. C'est le cas de tout le lot 3 — prévoir deux runs par
+> étape plutôt qu'un.
+
 ### Lot 3 — toolchain et dépendances larges (9 paquets, **un build chacun**)
 
 | Paquet | Actuel | Upstream | Remarque |
