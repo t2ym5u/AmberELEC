@@ -300,6 +300,21 @@ setup_toolchain() {
     export MAKEFLAGS="$MAKEFLAGS V=1 VERBOSE=1"
   fi
 
+  # optimize flag
+  #
+  # config/optimize puts -Ofast in TARGET_CFLAGS for everything. Upstream
+  # stopped doing that and appends the optimisation level here instead, so a
+  # package can ask for -O3 with PKG_BUILD_FLAGS="+o3" - systemd does, because
+  # -Ofast implies -ffinite-math-only and systemd does its own float checks.
+  #
+  # Taking upstream's structure wholesale would reorder the flags on every
+  # package and miss the entire compiler cache for a one-package fix, so
+  # substitute in place: every other command line stays byte-identical.
+  if flag_enabled "o3" "no"; then
+    TARGET_CFLAGS="${TARGET_CFLAGS/-Ofast/-O3}"
+    TARGET_CXXFLAGS="${TARGET_CXXFLAGS/-Ofast/-O3}"
+  fi
+
   case "$1" in
     target|init)
       export DESTIMAGE="target"

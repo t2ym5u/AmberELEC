@@ -109,6 +109,14 @@ else
   MESON_BUILD_TYPE="plain"
 fi
 
+# cmake 4 removed compatibility with cmake_minimum_required(VERSION < 3.5) and
+# errors out instead of warning. That is the shape of a great many of the older
+# libretro cores pinned in this tree, so without this the cmake bump fails them
+# wholesale rather than one at a time. Upstream exports it globally for the same
+# reason; it is simply an unknown variable to cmake 3.28, so it can land ahead
+# of the bump.
+export CMAKE_POLICY_VERSION_MINIMUM="3.5"
+
 CMAKE_GENERATOR_NINJA="-GNinja \
                        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 
