@@ -186,7 +186,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.device }}
-          path: release/aarch64/${{ matrix.device }}/
+          # The parent, not the device directory: the artifact then carries
+          # RG*/ itself, so build-finalize gets the same layout whether one
+          # device was built or four. See the download step.
+          path: release/aarch64/
           retention-days: 1
 
   # One clean VM per device, so the devices build in parallel rather than
@@ -241,7 +244,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.device }}
-          path: release/aarch64/${{ matrix.device }}/
+          # The parent, not the device directory: the artifact then carries
+          # RG*/ itself, so build-finalize gets the same layout whether one
+          # device was built or four. See the download step.
+          path: release/aarch64/
           retention-days: 1
 
   build-finalize:
@@ -254,11 +260,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Restores release/aarch64/<DEVICE>/ exactly as the build jobs left it.
+      #
+      # download-artifact v5+ extracts a lone match straight into `path`,
+      # without the per-artifact directory it creates when several match. A
+      # single-device dispatch therefore put its files in release/aarch64/,
+      # the Archive steps below found nothing under RG351P/, and two green
+      # runs published no image at all. Each artifact now carries its own
+      # RG*/ directory, and merge-multiple lays them side by side - one
+      # layout for one device or four.
       - name: Collect device builds
         uses: actions/download-artifact@v8
         with:
           pattern: RG*
           path: release/aarch64
+          merge-multiple: true
       - name: Archive RG351V (${{github.sha}})
         uses: actions/upload-artifact@v7
         if: github.event.client_payload.release_tag == ''
