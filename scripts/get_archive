@@ -83,6 +83,20 @@ case "${PKG_URL}" in
   # happening to carry a tarball LibreELEC has no use for. Debian's pool
   # serves the byte-identical file: sha256 e427de66... on both, matching
   # PKG_SHA256.
+  # www.libsdl.org timed out from the runners for over ten minutes and took
+  # the lot 3b build down at SDL2, whose 2.32.10 the LibreELEC mirror does
+  # not carry. libsdl-org publishes the same release tarballs as GitHub
+  # release assets - SDL2-2.32.10.tar.gz there verifies against Sam
+  # Lantinga's signature - so map release/ (SDL itself) and
+  # projects/<P>/release/ (the satellite libraries) onto them. SDL_net 1.2.8
+  # has no such asset; its fallback 404s and the mirror still follows.
+  *//www.libsdl.org/release/*)
+    GNU_MIRROR="https://github.com/libsdl-org/SDL/releases/download/release-${PKG_VERSION}/${PKG_URL##*/}"
+    ;;
+  *//www.libsdl.org/projects/*/release/*)
+    GNU_MIRROR="${PKG_URL#*/projects/}"
+    GNU_MIRROR="https://github.com/libsdl-org/${GNU_MIRROR%%/*}/releases/download/release-${PKG_VERSION}/${PKG_URL##*/}"
+    ;;
   *//pyropus.ca*/software/memtester/*)
     GNU_MIRROR="https://deb.debian.org/debian/pool/main/m/memtester/memtester_${PKG_VERSION}.orig.tar.gz"
     ;;
