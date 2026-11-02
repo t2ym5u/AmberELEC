@@ -42,6 +42,28 @@ l'ancien commit du lot 2 et devra être rebasé sur `dev` avant d'atterrir.
 
 ---
 
+## 2026-10-31 — Lot 3a : Python3, ccache, binutils
+
+Validé par un build RG351P complet (run 41073012437), en deux étages : le
+warm-up s'est arrêté à 420/459 et le job `build` a fini en 5 h 38.
+
+### Mis à jour
+
+- `Python3` 3.11.7 → 3.11.15, `ccache` 4.8.3 → 4.13.6, `binutils` 2.41 → 2.43.
+- `PKG_BUILD_FLAGS="+o3"` est désormais lu : `-Ofast` devient `-O3` pour les
+  paquets qui le demandent.
+- `CMAKE_POLICY_VERSION_MINIMUM=3.5` est exporté, en préparation de cmake 4.
+
+### Corrigé
+
+- **Deux builds verts n'avaient publié aucune image.** Depuis la montée de
+  `download-artifact` en v8, un motif qui ne trouve qu'un artefact l'extrait
+  sans sous-répertoire ; `build-finalize` cherchait donc l'image au mauvais
+  endroit. Les images du lot 2 et du 3a sont perdues, les builds eux-mêmes
+  restent valides. Les artefacts portent maintenant leur répertoire `RG*/`.
+
+---
+
 ## 2026-10-30 — Lot 2 : les paquets porteurs de patches
 
 Validé par un build RG351P complet (run 41015343552).
