@@ -204,26 +204,36 @@ runs:
             echo "smaller than what is already cached - leaving that in place"
           fi
 
-    # A repository gets 10 GB of Actions cache in total and GitHub evicts
-    # across the whole repo, least-recently-used first, once that is full.
-    # Dropping the device's previous key *before* uploading the new one, rather
-    # than after, is what keeps a single device inside the quota: these caches
-    # now run 5-6 GB each, so old plus new is already over 10 GB on its own and
-    # the upload would trigger an eviction of whatever else is in there.
-    #
-    # The trade is that a failed upload leaves this device with no cache at
-    # all, costing one cold run. That is the cheaper failure: the alternative
-    # is GitHub evicting an arbitrary cache on every save, which is how RG351V
-    # and RG351MP spent a week restoring colder caches than the run before.
-    - name: Drop the previous cache for this device
+    # always(), because the point is to keep what a failed or timed-out job
+    # already compiled.
+    - name: Save compiler cache
+      id: cache_save
       if: always() && steps.cache_check.outputs.save == 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.cache/amberelec-ccache
+        key: ccache-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
+
+    # Only once the new cache is safely up. This used to run before the save,
+    # to stay inside the repository's 10 GB without GitHub evicting another
+    # device's cache. But a save that never completes then leaves the device
+    # with nothing: run 41471241896's 'build' job hit its cap, the warm-up's
+    # 7 GB cache was gone afterwards with nothing saved in its place, and the
+    # next run restored no cache at all and spent six hours reaching package
+    # 338 of 459.
+    # The price is that, while old and new briefly coexist, GitHub may evict
+    # another device's cache to make room. Only RG351P is being built for now,
+    # and losing the one cache a device has is the worse of the two failures.
+    - name: Drop the previous cache for this device
+      if: always() && steps.cache_save.outcome == 'success'
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        KEEP: ccache-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
       run: |
           gh api "repos/${GITHUB_REPOSITORY}/actions/caches" --paginate \
             --jq ".actions_caches[]|select(.key|startswith(\"ccache-${{ inputs.device }}-\"))|.key" \
-            2>/dev/null | sort -u | while read -r k; do
+            2>/dev/null | sort -u | grep -vxF "$KEEP" | while read -r k; do
               # Say so when a delete is refused. Swallowing it is what let the
               # quota overrun go unnoticed while the token was still read-only.
               if gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches?key=${k}" >/dev/null 2>&1; then
@@ -232,15 +242,6 @@ runs:
                 echo "WARNING: could not delete $k - needs actions:write"
               fi
             done
-
-    # always(), because the point is to keep what a failed or timed-out job
-    # already compiled.
-    - name: Save compiler cache
-      if: always() && steps.cache_check.outputs.save == 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: ~/.cache/amberelec-ccache
-        key: ccache-${{ inputs.device }}-${{ github.run_id }}-${{ github.job }}
 
     - name: Cache quota after save
       if: always()

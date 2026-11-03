@@ -223,10 +223,14 @@ jobs:
         name: Checkout
         with:
           ref: "${{ needs.build-init.outputs.branch }}"
+      # Stopped from inside, like the warm-up, so the cache steps that follow
+      # get their time. Run 41471241896's 'build' reached the 360 cap
+      # instead, and the device ended that run with no cache at all.
       - uses: ./.github/actions/build-device
         with:
           device: ${{ matrix.device }}
           version: ${{ needs.build-init.outputs.version }}
+          soft_timeout: 335
       # Trim before upload: these never ship and would otherwise be copied
       # through the artifact store twice.
       - name: Cleanup system artifacts
