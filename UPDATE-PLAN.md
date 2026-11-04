@@ -194,6 +194,15 @@ Huit commits, chacun autonome, à poser un par un avec un build entre chaque.
 | **3f** | `gdb` 17.2, `poppler` 26.08.0 | patches OK |
 | **3g** | `libmali` 00aa2ae4, `quasi88` + contournement | somme `libmali` vérifiée (691,9 Mo) ; diff amont = 2 blobs g52 |
 
+**Avancement.** `o3`, `CMAKE_POLICY_VERSION_MINIMUM` et **3a** sont sur `dev`
+depuis le 31 octobre (run 41073012437). **3b** l'est depuis le 4 novembre
+(run 41787561922), avec deux correctifs que cmake 4 et une panne réseau ont
+rendus nécessaires : `yasm` repris d'upstream (construit par autotools, son
+`CMakeLists.txt` lisait une propriété que cmake 4 refuse), et un repli de
+`get_archive` vers les publications GitHub de libsdl-org. Il a fallu six
+runs, dont trois perdus sur le temps et le cache de compilation — voir le `CHANGELOG`.
+Reste **3c** à **3g**, à reporter sur `dev` depuis `lot3-prep`.
+
 **Le lot 3e est le résultat le plus utile de cette préparation.** En cherchant
 les fonctions de build qu'upstream porte et pas nous, dix paquets sont
 ressortis avec un contournement gcc 15 — une norme C rabattue, ou une erreur

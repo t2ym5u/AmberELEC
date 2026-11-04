@@ -7,7 +7,7 @@ Il reste volontairement court. Le **pourquoi** de chaque décision, les
 diagnostics et les fausses pistes sont dans [`FORK-CHANGES.md`](FORK-CHANGES.md) ;
 ce qui n'est pas encore fait est dans [`UPDATE-PLAN.md`](UPDATE-PLAN.md).
 
-État au 28 octobre 2026 : **117 commits** d'avance sur `upstream/dev`, 37 de
+État au 4 novembre 2026 : **133 commits** d'avance sur `upstream/dev`, 37 de
 retard.
 
 ---
@@ -20,7 +20,7 @@ utilisable à la fois.
 
 | Branche | Contenu | Commits |
 |---|---|---|
-| `lot3-prep` | toolchain et dépendances larges | 8 |
+| `lot3-prep` | toolchain et dépendances larges (3c à 3g) | 5 |
 | `lot4-prep` | paquets morts et leurs remplaçants | 2 |
 
 Ordre prévu : `lot3` → `lot4`, un build par étape. `lot4-prep` porte encore
@@ -39,6 +39,42 @@ l'ancien commit du lot 2 et devra être rebasé sur `dev` avant d'atterrir.
   révélé le seul vrai piège : `7zz` ne connaît pas le `-l` de p7zip, et le
   retirer est l'équivalent exact puisque `7zz` déréférence les liens
   symboliques par défaut.
+
+---
+
+## 2026-11-04 — Lot 3b : cmake 4
+
+Validé par un build RG351P complet (run 41787561922, 4 h 53). L'image
+`RG351P-dev-main-20261104_0644-bf131b3` est la première publiée depuis le
+correctif de `build-finalize` : il est donc vérifié.
+
+### Mis à jour
+
+- `cmake` 3.28.1 → 4.4.2.
+- `yasm` repris d'upstream. Il se construit maintenant par autotools : son
+  `CMakeLists.txt` lit la propriété `LOCATION`, que cmake 4 refuse. Notre
+  `PKG_USE_CMAKE="no"` n'était plus lu par rien.
+
+### Corrigé
+
+- **`scripts/get_archive` se replie sur les publications GitHub de
+  libsdl-org** quand `www.libsdl.org` ne répond pas, ce qui a fait tomber un
+  build sur SDL2 2.32.10, absent du miroir LibreELEC.
+- **Un job coupé à sa limite pouvait laisser l'appareil sans aucun cache.**
+  Le cache précédent était supprimé avant l'envoi du nouveau ; le job `build`
+  du run 41471241896 a atteint son plafond, et le cache de 7 Go du warm-up a
+  disparu sans remplaçant. Le cache précédent n'est plus supprimé qu'après
+  l'envoi réussi du nouveau, et le job `build` a désormais le même arrêt
+  interne que le warm-up (335 min sur 360), pour laisser le temps de
+  sauvegarder.
+
+### Coût
+
+Six runs. Le premier est tombé sur la panne de `www.libsdl.org`, le
+deuxième sur `yasm`. Le troisième, sans erreur, a manqué de temps à 440/459
+et perdu le cache ; la reprise, partie à froid, n'a atteint que 338/459. Un
+cinquième run en deux étages a reconstruit le cache (arrêt à 442/459), et le
+sixième, sans warm-up, a fini.
 
 ---
 
