@@ -148,6 +148,13 @@ pre_make_target() {
   sed -i '/obj-$(CONFIG_FAT_FS).*+= fat\//a obj-$(CONFIG_EXFAT_FS)\t\t+= exfat\/' Makefile
   cd ${PREEXF}
 
+  # gcc 15 adds -Wheader-guard, and the Rockchip BSP's gcc-wrapper.py turns a
+  # list of warnings into hard errors ("forbidden warning") - the in-tree
+  # ew-7611ulb wifi driver died on it. Same two lines as upstream, which
+  # builds this kernel with gcc 15.
+  export KCFLAGS="${KCFLAGS} -Wno-header-guard"
+  export KCFLAGS="${KCFLAGS} -w"
+
   kernel_make oldconfig
 
   # regdb (backward compatability with pre-4.15 kernels)
