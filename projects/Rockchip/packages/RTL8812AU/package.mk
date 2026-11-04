@@ -15,6 +15,7 @@ PKG_IS_KERNEL_PKG="yes"
 
 pre_make_target() {
   unset LDFLAGS
+  export KCFLAGS="${KCFLAGS} -Wno-header-guard"
 }
 
 make_target() {
