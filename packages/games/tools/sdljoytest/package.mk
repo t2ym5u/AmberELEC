@@ -11,8 +11,17 @@ PKG_DEPENDS_TARGET="toolchain SDL2"
 PKG_LONGDESC="Test joystick with SDL2 in Linux"
 PKG_TOOLCHAIN="make"
 
-pre_configure_target() {
-  sed -i "s|gcc|${CC}|" Makefile
+make_target() {
+  local program
+
+  for program in test_gamepad_SDL2 map_gamepad_SDL2 gamepad_info; do
+    ${CXX} ${CXXFLAGS} \
+      -std=gnu++17 \
+      -I"${SYSROOT_PREFIX}/usr/include/SDL2" \
+      "${program}.cpp" \
+      -o "${program}" \
+      ${LDFLAGS} -lSDL2 || return 1
+  done
 }
 
 makeinstall_target() {
