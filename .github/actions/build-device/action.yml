@@ -22,6 +22,13 @@ inputs:
     required: false
     default: ''
 
+outputs:
+  timed_out:
+    description: >
+      'true' when soft_timeout stopped the build, empty otherwise - including
+      when it failed on an error, which the next stage would only repeat.
+    value: ${{ steps.build.outputs.timed_out }}
+
 runs:
   using: composite
   steps:
@@ -61,6 +68,7 @@ runs:
           ccache-${{ inputs.device }}-
 
     - name: Build ${{ inputs.device }}
+      id: build
       shell: bash
       run: |
           set -e
@@ -119,8 +127,18 @@ runs:
           # a compiler mid-link can sit on it, and the whole point is to be out
           # of the step before the job's own cap turns this into 'cancelled'.
           if [ -n "${{ inputs.soft_timeout }}" ]; then
+            # 124 is timeout's own exit status, 137 the KILL that follows
+            # --kill-after. Anything else is the build's, and is reported as
+            # it is.
+            set +e
             timeout --kill-after=5m "${{ inputs.soft_timeout }}m" \
               make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
+            rc=$?
+            set -e
+            if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+              echo "timed_out=true" >> "$GITHUB_OUTPUT"
+            fi
+            exit "$rc"
           else
             make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
           fi

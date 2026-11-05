@@ -18,20 +18,11 @@ on:
         description: 'Run the cache warm-up stage first (turn off once a build finishes in one job)'
         type: boolean
         default: true
-  push:
-    paths-ignore:
-      - '.github/**'
-      - 'LICENSE.md'
-      - 'Dockerfile'
-      - '.dockerignore'
-      # Documentation changes nothing about what gets built, and with
-      # cancel-in-progress a docs commit would otherwise kill a running build -
-      # which is exactly what a FORK-CHANGES.md push did.
-      - '**.md'
-      - 'docs/**'
-    branches:
-      - main
-      - dev
+  # No push trigger. A push to dev or main built all four devices, warm-up
+  # and build each - up to eight six-hour jobs from one forgotten [skip ci] -
+  # and the fork has to keep its Actions usage reasonable: GitHub suspended
+  # its Actions once already. Builds are dispatched by hand, one device at a
+  # time.
 # Ensure that if there are multiple builds for main only 1 is queued during a build
 # Example: 1st commit in main starts a build then 2-9 commits come in during the first build.
 #          'concurrency' makes it so that only commit 9 is enqueued to build rather builds 2-9 all runing a build.
@@ -152,6 +143,11 @@ jobs:
     # skipped and the run produced nothing.
     timeout-minutes: 350
     runs-on: ubuntu-latest
+    # Read by the job below: it only takes over a warm-up that ran out of
+    # time. With a matrix the last device to finish sets it, which is good
+    # enough while one device is built at a time.
+    outputs:
+      timed_out: ${{ steps.build.outputs.timed_out }}
     strategy:
       fail-fast: false
       matrix:
@@ -162,6 +158,7 @@ jobs:
         with:
           ref: "${{ needs.build-init.outputs.branch }}"
       - uses: ./.github/actions/build-device
+        id: build
         with:
           device: ${{ matrix.device }}
           version: ${{ needs.build-init.outputs.version }}
@@ -207,10 +204,16 @@ jobs:
     # asked to stop. That happened - a superfluous dispatch was cancelled and
     # came back as a second RG351P build competing with the real one for the
     # same compiler cache.
+    #
+    # And only when the warm-up ran out of time, not when it hit an error.
+    # A compile error in the warm-up used to start this job anyway, which
+    # rebuilt from the same cache, died on the same package an hour later,
+    # and doubled the cost of every failure - five times running while gcc 15
+    # was brought up.
     if: >-
       always() && needs.build-init.result == 'success'
-      && needs.build-warmup.result != 'success'
-      && needs.build-warmup.result != 'cancelled'
+      && (needs.build-warmup.result == 'skipped'
+          || needs.build-warmup.outputs.timed_out == 'true')
       && !cancelled()
     timeout-minutes: 360
     runs-on: ubuntu-latest
