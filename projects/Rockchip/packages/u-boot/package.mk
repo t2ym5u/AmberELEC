@@ -31,6 +31,12 @@ elif [[ "${DEVICE}" =~ RG552 ]]; then
 fi
 
 post_patch() {
+  # gcc 15 defaults to C23, whose <stddef.h> defines unreachable() itself,
+  # and u-boot's own definition then fails as a redefinition under -Werror.
+  # Same sed as upstream.
+  if [ -f "${PKG_BUILD}/include/linux/compiler-gcc.h" ]; then
+    sed -i 's/#define unreachable() __builtin_unreachable()/#undef unreachable\n#define unreachable() __builtin_unreachable()/' ${PKG_BUILD}/include/linux/compiler-gcc.h
+  fi
   if [ -n "${UBOOT_SYSTEM}" ] && find_file_path bootloader/config; then
     PKG_CONFIG_FILE="${PKG_BUILD}/configs/$(${ROOT}/${SCRIPTS}/uboot_helper ${PROJECT} ${DEVICE} ${UBOOT_SYSTEM} config)"
     if [ -f "${PKG_CONFIG_FILE}" ]; then
@@ -40,6 +46,11 @@ post_patch() {
 }
 
 make_target() {
+  # Upstream drops the linker script from the EFI objects' flags on RG351,
+  # which is where the gcc 15 build failed (arch/arm/lib/reloc_aarch64_efi.o).
+  if [[ "${DEVICE}" =~ RG351 ]]; then
+    sed -i 's/-T \$(EFI_LDS_PATH) //' scripts/Makefile.lib
+  fi
   sed -i -e '/	kwbimage.o..*$/d' tools/Makefile
   if [ -z "${UBOOT_SYSTEM}" ]; then
     echo "UBOOT_SYSTEM must be set to build an image"
