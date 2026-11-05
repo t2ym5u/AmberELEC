@@ -11,6 +11,12 @@ PKG_DEPENDS_TARGET="toolchain SDL2 SDL2_net"
 PKG_LONGDESC="An open-source port of the DOS shoot-em-up Tyrian."
 PKG_TOOLCHAIN="make"
 
+# animlib.c calls malloc without <stdlib.h>, an error rather than a warning
+# since gcc 14. Same line as upstream.
+post_patch() {
+  sed -i '1i #include <stdlib.h>' ${PKG_BUILD}/src/animlib.c
+}
+
 pre_configure_target() {
   CFLAGS+=" -I$(get_build_dir SDL2)/include"
   CFLAGS+=" -I$(get_build_dir SDL2_net)"

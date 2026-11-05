@@ -1,0 +1,16 @@
+gcc 15 rejects the body of this assignment operator: both members are const,
+so it can never compile, and gcc 15 now checks template bodies before
+instantiation (-Wtemplate-body). Deleting it is what upstream AmberELEC does,
+with a sed on the installed header from emulationstation.
+
+--- a/include/rapidjson/document.h
++++ b/include/rapidjson/document.h
+@@ -316,7 +316,7 @@
+ 
+     GenericStringRef(const GenericStringRef& rhs) : s(rhs.s), length(rhs.length) {}
+ 
+-    GenericStringRef& operator=(const GenericStringRef& rhs) { s = rhs.s; length = rhs.length; }
++    GenericStringRef& operator=(const GenericStringRef& rhs) = delete;
+ 
+     //! implicit conversion to plain CharType pointer
+     operator const Ch *() const { return s; }
