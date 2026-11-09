@@ -10,6 +10,13 @@ PKG_LICENSE="GPL"
 PKG_SITE="https://ccache.dev/download.html"
 PKG_URL="https://github.com/ccache/ccache/releases/download/v${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_DEPENDS_HOST="cmake:host"
+# ccache 4.13 fetches zstd 1.5.7 itself at configure time, straight from
+# GitHub and with no retry or mirror: one 504 there took a build down at
+# package 6. Our zstd package is the same 1.5.7 tarball (same SHA256), and
+# scripts/get_archive fetches it with retries and a fallback mirror, so
+# unpack it and point FetchContent at it instead. xxhash is still fetched
+# this way: there is no package for it to come from.
+PKG_DEPENDS_UNPACK="zstd"
 PKG_LONGDESC="A compiler cache to speed up re-compilation of C/C++ code by caching."
 PKG_TOOLCHAIN="cmake"
 
@@ -27,7 +34,8 @@ pre_configure_host() {
                        -DREDIS_STORAGE_BACKEND=OFF \
                        -DENABLE_DOCUMENTATION=OFF \
                        -DENABLE_TESTING=OFF \
-                       -DZSTD_FROM_INTERNET=ON"
+                       -DZSTD_FROM_INTERNET=ON \
+                       -DFETCHCONTENT_SOURCE_DIR_ZSTD=$(get_build_dir zstd)"
 }
 
 pre_configure_init() {
@@ -37,7 +45,8 @@ pre_configure_init() {
                        -DREDIS_STORAGE_BACKEND=OFF \
                        -DENABLE_DOCUMENTATION=OFF \
                        -DENABLE_TESTING=OFF \
-                       -DZSTD_FROM_INTERNET=ON"
+                       -DZSTD_FROM_INTERNET=ON \
+                       -DFETCHCONTENT_SOURCE_DIR_ZSTD=$(get_build_dir zstd)"
 }
 
 post_makeinstall_host() {

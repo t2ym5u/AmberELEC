@@ -97,6 +97,15 @@ case "${PKG_URL}" in
     GNU_MIRROR="${PKG_URL#*/projects/}"
     GNU_MIRROR="https://github.com/libsdl-org/${GNU_MIRROR%%/*}/releases/download/release-${PKG_VERSION}/${PKG_URL##*/}"
     ;;
+  # facebook/zstd became meta/zstd, and since the move every release asset
+  # of the repository answers 504 - 1.5.6 as well as 1.5.7 - while other
+  # repositories' assets and meta/zstd's /archive/ tarballs serve fine. The
+  # LibreELEC mirror has no 1.5.7. Buildroot's source mirror serves the
+  # byte-identical release tarball (sha256 eb33e51f..., matching
+  # PKG_SHA256).
+  *//github.com/facebook/zstd/releases/*|*//github.com/meta/zstd/releases/*)
+    GNU_MIRROR="https://sources.buildroot.net/zstd/${PKG_URL##*/}"
+    ;;
   *//pyropus.ca*/software/memtester/*)
     GNU_MIRROR="https://deb.debian.org/debian/pool/main/m/memtester/memtester_${PKG_VERSION}.orig.tar.gz"
     ;;
