@@ -7,7 +7,11 @@ PKG_VERSION="eb342748c828421bd15a1791162c885bfde61907"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/libretro/mame"
 PKG_URL="${PKG_SITE}.git"
-PKG_DEPENDS_TARGET="toolchain zlib flac sqlite expat"
+# alsa-lib: the bundled portaudio includes alsa/asoundlib.h. Upstream does
+# not list it and gets away with it because the full build happens to reach
+# alsa-lib (package ~150) long before mame (~440); building mame on its own
+# first failed on it after three hours.
+PKG_DEPENDS_TARGET="toolchain zlib flac sqlite expat alsa-lib"
 PKG_LONGDESC="MAME - Multiple Arcade Machine Emulator"
 PKG_TOOLCHAIN="make"
 
