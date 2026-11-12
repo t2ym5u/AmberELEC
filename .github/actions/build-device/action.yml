@@ -21,6 +21,16 @@ inputs:
       own cap and the distinction holds.
     required: false
     default: ''
+  first_package:
+    description: >
+      Package to build, with its dependencies, before the full build - in the
+      same build volume and under the same soft_timeout, so the full build
+      then finds it done. Empty means none. This exists for mame: the full
+      build reaches it only after ~4h30 of the other 443 packages, leaving it
+      about an hour before the cap, and after gcc 15 invalidated its cache it
+      needs far more than that.
+    required: false
+    default: ''
 
 outputs:
   timed_out:
@@ -126,13 +136,28 @@ runs:
           # --kill-after because TERM alone is a request: make forwards it, but
           # a compiler mid-link can sit on it, and the whole point is to be out
           # of the step before the job's own cap turns this into 'cancelled'.
+          # first_package runs build_mt, the same parallel builder the image
+          # uses, in the device's own volume: COMMAND given on the command
+          # line overrides the Makefile's 'make <device>' but keeps the
+          # amberelec-build-<device> volume. Every device here is aarch64.
+          export DEVICE="${{ inputs.device }}"
+          export FIRST_PACKAGE="${{ inputs.first_package }}"
+          build() {
+            if [ -n "$FIRST_PACKAGE" ]; then
+              make DOCKER_WORK_DIR=/work \
+                COMMAND="DISTRO=AmberELEC PROJECT=Rockchip DEVICE=$DEVICE ARCH=aarch64 ./scripts/build_mt $FIRST_PACKAGE" \
+                "docker-$DEVICE" || return
+            fi
+            make DOCKER_WORK_DIR=/work "docker-$DEVICE"
+          }
+          export -f build
+
           if [ -n "${{ inputs.soft_timeout }}" ]; then
             # 124 is timeout's own exit status, 137 the KILL that follows
             # --kill-after. Anything else is the build's, and is reported as
             # it is.
             set +e
-            timeout --kill-after=5m "${{ inputs.soft_timeout }}m" \
-              make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
+            timeout --kill-after=5m "${{ inputs.soft_timeout }}m" bash -c build
             rc=$?
             set -e
             if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
@@ -140,7 +165,7 @@ runs:
             fi
             exit "$rc"
           else
-            make DOCKER_WORK_DIR=/work docker-${{ inputs.device }}
+            build
           fi
 
     # Killing the build step does not stop the container it started, which keeps

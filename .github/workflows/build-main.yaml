@@ -18,6 +18,10 @@ on:
         description: 'Run the cache warm-up stage first (turn off once a build finishes in one job)'
         type: boolean
         default: true
+      first_package:
+        description: 'Package to build before the rest, e.g. mame (empty for none)'
+        type: string
+        default: ''
   # No push trigger. A push to dev or main built all four devices, warm-up
   # and build each - up to eight six-hour jobs from one forgotten [skip ci] -
   # and the fork has to keep its Actions usage reasonable: GitHub suspended
@@ -163,6 +167,7 @@ jobs:
           device: ${{ matrix.device }}
           version: ${{ needs.build-init.outputs.version }}
           soft_timeout: 330
+          first_package: ${{ github.event.inputs.first_package }}
       # This stage was built to be cut short, but with a warm cache it can now
       # finish the whole build - one did, image and all, and the result was
       # thrown away because only the job below published anything. If it got
@@ -234,6 +239,7 @@ jobs:
           device: ${{ matrix.device }}
           version: ${{ needs.build-init.outputs.version }}
           soft_timeout: 335
+          first_package: ${{ github.event.inputs.first_package }}
       # Trim before upload: these never ship and would otherwise be copied
       # through the artifact store twice.
       - name: Cleanup system artifacts
