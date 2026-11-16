@@ -2,90 +2,46 @@
 # Copyright (C) 2019 Trond Haugland (trondah@gmail.com)
 # Copyright (C) 2022-present AmberELEC (https://github.com/AmberELEC)
 
+# mame is not compiled here. From scratch it takes nine hours or more, longer
+# than a hosted CI job, and its objects do not fit in the compiler cache next
+# to the other packages. t2ym5u/amberelec-mame holds the source recipe that
+# used to live here, builds it with this tree's toolchain and publishes the
+# core; this package installs that.
+#
+# The binary is linked against libraries of this image. Rebuild it there, then
+# update PKG_VERSION and the PKG_SHA256 below, whenever gcc (libstdc++), glibc,
+# zlib, flac, sqlite, expat, alsa-lib or mame itself change.
+
 PKG_NAME="mame"
-PKG_VERSION="eb342748c828421bd15a1791162c885bfde61907"
 PKG_LICENSE="GPLv2"
-PKG_SITE="https://github.com/libretro/mame"
-PKG_URL="${PKG_SITE}.git"
-# alsa-lib: the bundled portaudio includes alsa/asoundlib.h. Upstream does
-# not list it and gets away with it because the full build happens to reach
-# alsa-lib (package ~150) long before mame (~440); building mame on its own
-# first failed on it after three hours.
+PKG_SITE="https://github.com/t2ym5u/amberelec-mame"
+# The runtime libraries the core links against.
 PKG_DEPENDS_TARGET="toolchain zlib flac sqlite expat alsa-lib"
-PKG_LONGDESC="MAME - Multiple Arcade Machine Emulator"
-PKG_TOOLCHAIN="make"
+PKG_LONGDESC="MAME - Multiple Arcade Machine Emulator (prebuilt libretro core)"
+PKG_TOOLCHAIN="manual"
 
-PKG_MAKE_OPTS_TARGET="REGENIE=1 \
-                      VERBOSE=1 \
-                      NOWERROR=1 \
-                      OPENMP=1 \
-                      CROSS_BUILD=1 \
-                      TOOLS=0 \
-                      RETRO=1 \
-                      PTR64=0 \
-                      NOASM=0 \
-                      NO_USE_BGFX=1 \
-                      OPTIMIZE=fast \
-                      PYTHON_EXECUTABLE=python3 \
-                      CONFIG=libretro \
-                      LIBRETRO_OS=unix \
-                      LIBRETRO_CPU=arm64 \
-                      PLATFORM=arm64 \
-                      ARCH= \
-                      TARGET=mame \
-                      SUBTARGET=mame \
-                      OSD=retro \
-                      USE_SYSTEM_LIB_EXPAT=1 \
-                      USE_SYSTEM_LIB_ZLIB=1 \
-                      USE_SYSTEM_LIB_FLAC=1 \
-                      USE_SYSTEM_LIB_SQLITE3=1"
+case "${DEVICE}" in
+  RG351P|RG351V|RG351MP)
+    PKG_VERSION="eb342748c828-rk3326-amberelec-f6c36f49"
+    PKG_SHA256="6b2aed1997c5c527241b2932097eb8ddb580ed770616542e9d3dcc2fb209d2d6"
+    ;;
+  *)
+    die "mame: no prebuilt core for ${DEVICE} yet - run build-mame in t2ym5u/amberelec-mame for it"
+    ;;
+esac
+PKG_URL="${PKG_SITE}/releases/download/${PKG_VERSION}/mame_libretro-${PKG_VERSION}.tar.xz"
 
-pre_configure_target() {
-  export CFLAGS="${CFLAGS} -Wno-deprecated-declarations"
-  sed -i "s/-static-libstdc++//g" scripts/genie.lua
-  find scripts/ -type f -name "*.lua" -exec sed -i 's|MAME_DIR\s*\.\.\s*"src/osd/libretro/retroprefix.h"|path.getrelative(path.getabsolute("build/projects/retro/mame/gmake-linux"), path.getabsolute("src/osd/libretro/retroprefix.h"))|g' {} +
-
-  sed -i 's|^\([ \t]*CC[ \t]*=\).*|\1 /usr/bin/gcc|g' 3rdparty/genie/build/gmake.linux/genie.make
-  sed -i 's|^\([ \t]*CXX[ \t]*=\).*|\1 /usr/bin/g++|g' 3rdparty/genie/build/gmake.linux/genie.make
-
-  sed -i 's|\$(MAKE) \$(MAKEPARAMS) -C \$(GENIE_DIR)|\$(MAKE) -C \$(GENIE_DIR) CC="/usr/bin/gcc" CXX="/usr/bin/g++" CFLAGS="" CPPFLAGS="" LDFLAGS=""|g' makefile
-}
-
-make_target() {
-  unset ARCH
-  unset DISTRO
-  unset PROJECT
-  export ARCHOPTS="-D__aarch64__ -DASMJIT_BUILD_X86"
-
-  env -u CFLAGS -u LDFLAGS -u CPPFLAGS make -C 3rdparty/genie/build/gmake.linux -f genie.make \
-      CC="/usr/bin/gcc" \
-      CXX="/usr/bin/g++" \
-      CFLAGS="" \
-      CPPFLAGS="" \
-      LDFLAGS=""
-
-  local my_cc="${CC}"
-  local my_cxx="${CXX}"
-
-  if [ -n "${CCACHE_DIR}" ] && [ -x "${TOOLCHAIN}/bin/ccache" ]; then
-    my_cc="${TOOLCHAIN}/bin/ccache ${CC}"
-    my_cxx="${TOOLCHAIN}/bin/ccache ${CXX}"
-  fi
-
-  make ${PKG_MAKE_OPTS_TARGET} \
-       OVERRIDE_CC="${my_cc}" \
-       OVERRIDE_CXX="${my_cxx}" \
-       OVERRIDE_LD="${LD}" \
-       AR="${AR}" \
-       LDFLAGS="${LDFLAGS}" \
-       ${MAKEFLAGS}
+# The archive holds its two files at the top, with no directory around them.
+unpack() {
+  mkdir -p ${PKG_BUILD}
+  tar -xJf ${SOURCES}/${PKG_NAME}/${PKG_SOURCE_NAME} -C ${PKG_BUILD}
 }
 
 makeinstall_target() {
   mkdir -p ${INSTALL}/usr/lib/libretro
-  cp *.so ${INSTALL}/usr/lib/libretro/mame_libretro.so
+  cp ${PKG_BUILD}/mame_libretro.so ${INSTALL}/usr/lib/libretro/mame_libretro.so
   mkdir -p ${INSTALL}/usr/config/retroarch/savefiles/mame/hi
-  cp -f plugins/hiscore/hiscore.dat ${INSTALL}/usr/config/retroarch/savefiles/mame/hi
+  cp -f ${PKG_BUILD}/hiscore.dat ${INSTALL}/usr/config/retroarch/savefiles/mame/hi
   mkdir -p ${INSTALL}/usr/config/mame
   cp ${PKG_DIR}/config/*.cfg ${INSTALL}/usr/config/mame
 }
