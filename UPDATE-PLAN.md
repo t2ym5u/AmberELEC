@@ -210,8 +210,8 @@ construit et publié par `t2ym5u/amberelec-mame` ; le paquet `mame` télécharge
 le binaire. **À chaque changement de gcc, glibc, zlib, flac, sqlite, expat,
 alsa-lib ou mame, il faut relancer `build-mame` et reporter tag et somme dans
 le paquet.** Et **poppler** 26.08 exige boost 1.83 : il se construit sans boost
-jusqu'au **3d**, qui le réactivera (`-DENABLE_BOOST`).
-Reste **3d** sur `lot3-prep`.
+jusqu'au **3d**. Celui-ci est sur `dev` depuis le même jour (run 44088366945),
+poppler de nouveau avec boost : **le lot 3 est terminé.**
 
 **Le lot 3e est le résultat le plus utile de cette préparation.** En cherchant
 les fonctions de build qu'upstream porte et pas nous, dix paquets sont

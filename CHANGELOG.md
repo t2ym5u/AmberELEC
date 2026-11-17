@@ -7,7 +7,7 @@ Il reste volontairement court. Le **pourquoi** de chaque décision, les
 diagnostics et les fausses pistes sont dans [`FORK-CHANGES.md`](FORK-CHANGES.md) ;
 ce qui n'est pas encore fait est dans [`UPDATE-PLAN.md`](UPDATE-PLAN.md).
 
-État au 17 novembre 2026 : **158 commits** d'avance sur `upstream/dev`, 37 de
+État au 17 novembre 2026 : **165 commits** d'avance sur `upstream/dev`, 37 de
 retard.
 
 ---
@@ -20,11 +20,11 @@ utilisable à la fois.
 
 | Branche | Contenu | Commits |
 |---|---|---|
-| `lot3-prep` | `glib` et `boost` (3d) ; 3c, 3e, 3f et 3g sont sur `dev` | 1 |
 | `lot4-prep` | paquets morts et leurs remplaçants | 2 |
 
-Ordre prévu : `lot3` → `lot4`, un build par étape. `lot4-prep` porte encore
-l'ancien commit du lot 2 et devra être rebasé sur `dev` avant d'atterrir.
+Le lot 3 est entièrement sur `dev`. Reste `lot4`, en un build : `lot4-prep`
+porte encore l'ancien commit du lot 2 et devra être rebasé sur `dev` avant
+d'atterrir.
 
 ### Lot 4 — paquets morts
 
@@ -39,6 +39,20 @@ l'ancien commit du lot 2 et devra être rebasé sur `dev` avant d'atterrir.
   révélé le seul vrai piège : `7zz` ne connaît pas le `-l` de p7zip, et le
   retirer est l'équivalent exact puisque `7zz` déréférence les liens
   symboliques par défaut.
+
+---
+
+## 2026-11-17 — Lot 3d : glib, boost
+
+Validé par un build RG351P complet (run 44088366945, 3 h 15, sans warm-up).
+L'image `RG351P-dev-main-20261117_1300-5e48f56` est publiée. Le lot 3 est
+terminé.
+
+### Mis à jour
+
+- `glib` 2.78.3 → 2.89.4, avec les options meson renommées entre-temps.
+- `boost` 1.82.0 → 1.92.0.
+- `poppler` se construit de nouveau avec boost.
 
 ---
 
