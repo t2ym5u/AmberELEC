@@ -201,7 +201,17 @@ rendus nécessaires : `yasm` repris d'upstream (construit par autotools, son
 `CMakeLists.txt` lisait une propriété que cmake 4 refuse), et un repli de
 `get_archive` vers les publications GitHub de libsdl-org. Il a fallu six
 runs, dont trois perdus sur le temps et le cache de compilation — voir le `CHANGELOG`.
-Reste **3c** à **3g**, à reporter sur `dev` depuis `lot3-prep`.
+**3c**, **3e**, **3f** et **3g** sont sur `dev` depuis le 17 novembre (run
+44037682686) : gcc 15 est validé. Deux écarts au plan initial. **mame** sort
+de l'arbre : compilé de zéro, il dépasse un job hébergé, et ses objets ne
+tiennent pas dans le cache de 10 Go à côté des autres paquets — le cache plein
+les chassait d'un run à l'autre, et aucun run n'en venait à bout. Il est
+construit et publié par `t2ym5u/amberelec-mame` ; le paquet `mame` télécharge
+le binaire. **À chaque changement de gcc, glibc, zlib, flac, sqlite, expat,
+alsa-lib ou mame, il faut relancer `build-mame` et reporter tag et somme dans
+le paquet.** Et **poppler** 26.08 exige boost 1.83 : il se construit sans boost
+jusqu'au **3d**, qui le réactivera (`-DENABLE_BOOST`).
+Reste **3d** sur `lot3-prep`.
 
 **Le lot 3e est le résultat le plus utile de cette préparation.** En cherchant
 les fonctions de build qu'upstream porte et pas nous, dix paquets sont

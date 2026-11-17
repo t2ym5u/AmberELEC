@@ -7,7 +7,7 @@ Il reste volontairement court. Le **pourquoi** de chaque décision, les
 diagnostics et les fausses pistes sont dans [`FORK-CHANGES.md`](FORK-CHANGES.md) ;
 ce qui n'est pas encore fait est dans [`UPDATE-PLAN.md`](UPDATE-PLAN.md).
 
-État au 4 novembre 2026 : **133 commits** d'avance sur `upstream/dev`, 37 de
+État au 17 novembre 2026 : **158 commits** d'avance sur `upstream/dev`, 37 de
 retard.
 
 ---
@@ -20,7 +20,7 @@ utilisable à la fois.
 
 | Branche | Contenu | Commits |
 |---|---|---|
-| `lot3-prep` | toolchain et dépendances larges (3c à 3g) | 5 |
+| `lot3-prep` | `glib` et `boost` (3d) ; 3c, 3e, 3f et 3g sont sur `dev` | 1 |
 | `lot4-prep` | paquets morts et leurs remplaçants | 2 |
 
 Ordre prévu : `lot3` → `lot4`, un build par étape. `lot4-prep` porte encore
@@ -39,6 +39,68 @@ l'ancien commit du lot 2 et devra être rebasé sur `dev` avant d'atterrir.
   révélé le seul vrai piège : `7zz` ne connaît pas le `-l` de p7zip, et le
   retirer est l'équivalent exact puisque `7zz` déréférence les liens
   symboliques par défaut.
+
+---
+
+## 2026-11-17 — Lots 3c, 3e, 3f, 3g : gcc 15
+
+Validé par un build RG351P complet (run 44037682686, 3 h, sans warm-up). L'image
+`RG351P-dev-main-20261117_0718-e97ba5d` est publiée.
+
+### Mis à jour
+
+- `gcc` 13.3.0 → 15.3.0, avec un `PKG_SHA256` qu'il n'avait pas.
+- `gdb` 11.1 → 17.2 et `poppler` 23.10.0 → 26.08.0, reportés du lot 1 parce
+  qu'ils exigeaient gcc 15.
+- Repris d'upstream, parce que gcc 15 en a besoin : `glibc` (en-têtes
+  installés pour l'amorçage de gcc), `zip`, `elfutils`, `apitrace`,
+  `jstest-sdl`, `sdljoytest` et le pilote RTL815x.
+- **mame n'est plus compilé ici.** De zéro, il demande neuf heures ou plus, et
+  ses fichiers objets ne tiennent pas dans le cache de 10 Go à côté des autres
+  paquets : chaque build complet s'arrêtait sur lui. Sa recette et ses patches
+  sont partis dans [`t2ym5u/amberelec-mame`](https://github.com/t2ym5u/amberelec-mame),
+  qui le construit avec notre toolchain et le publie ; le paquet `mame`
+  télécharge ce binaire et vérifie sa somme. Seul rk3326 (RG351P/V/MP) a un
+  binaire pour l'instant ; il faut le reconstruire quand changent gcc, glibc,
+  zlib, flac, sqlite, expat, alsa-lib ou mame.
+
+### Corrigé
+
+- **C23 par défaut.** Contournements repris d'upstream pour sept paquets
+  (lot 3e) et arbitrés pour libmali et quasi88 (lot 3g).
+- **Noyau et pilotes Wi-Fi** : `-Wheader-guard` est neuf et le noyau refuse
+  tout avertissement ; KCFLAGS d'upstream.
+- **u-boot** : la macro `unreachable`, désormais définie par la norme C23.
+- **rapidjson** : un opérateur d'affectation sans corps valide, que
+  `-Wtemplate-body` refuse ; il devient `= delete`.
+- **opentyrian** : déclaration implicite de fonctions de `stdlib.h`.
+- **mame** dépendait d'`alsa-lib` sans le déclarer ; le build complet le
+  construisait avant par chance.
+- **ccache** ne télécharge plus zstd lui-même : `facebook/zstd` est devenu
+  `meta/zstd`, dont les fichiers de release répondaient 504. Il prend la source
+  de notre paquet zstd, et `get_archive` se replie sur le miroir de Buildroot.
+- **poppler** 26.08 exige boost 1.83 ; le nôtre est en 1.82 jusqu'au lot 3d. Il
+  se construit sans boost, qui n'accélérait que le rendu Splash.
+
+### CI
+
+- `build-main` ne se déclenche plus sur push, et le job `build` ne relance
+  plus après un warm-up tombé sur une erreur. GitHub avait suspendu une fois
+  les Actions du fork ; un build par jour au plus, lancé à la main, puis deux
+  depuis le 13 novembre, tous dépôts confondus.
+- Nouvelle option `first_package` : construit un paquet et ses dépendances
+  avant le reste. mame, recompilé de zéro par gcc 15, n'avait qu'une heure
+  par run après les 443 autres paquets, et s'est arrêté trois fois.
+
+### Coût
+
+Dix-sept runs de `build-main` du 4 au 17 novembre, plus trois de `build-mame`.
+Une partie est tombée sur les ruptures de gcc 15 corrigées ci-dessus et sur la
+panne de zstd chez GitHub. Les autres, sans erreur, s'arrêtaient sur la limite
+de temps : mame occupait la
+fin de chaque run et, le cache plein, ses objets en étaient chassés d'un run à
+l'autre. Sorti dans son dépôt, il a demandé trois runs ; le build complet
+suivant est tombé sur poppler, et le dernier a fini.
 
 ---
 
