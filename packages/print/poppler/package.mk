@@ -8,9 +8,7 @@ PKG_VERSION="26.08.0"
 PKG_LICENSE="GPL"
 PKG_SITE="https://poppler.freedesktop.org/"
 PKG_URL="${PKG_SITE}poppler-${PKG_VERSION}.tar.xz"
-# No boost: poppler 26.08 wants 1.83 or later and ours is 1.82. It only
-# speeds up the Splash backend; turn ENABLE_BOOST back on once boost moves on.
-PKG_DEPENDS_TARGET="toolchain zlib libpng libjpeg-turbo tiff fontconfig curl"
+PKG_DEPENDS_TARGET="toolchain zlib libpng libjpeg-turbo boost tiff fontconfig curl"
 PKG_LONGDESC="The poppler pdf rendering library "
 PKG_TOOLCHAIN="cmake-make"
 
@@ -22,5 +20,4 @@ PKG_CMAKE_OPTS_TARGET="-DCMAKE_BUILD_TYPE=release \
                        -DENABLE_LCMS=OFF \
                        -DENABLE_GPGME=OFF \
                        -DENABLE_LIBOPENJPEG=OFF \
-                       -DENABLE_CPP=OFF \
-                       -DENABLE_BOOST=OFF"
+                       -DENABLE_CPP=OFF"
