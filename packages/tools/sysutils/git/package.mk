@@ -8,7 +8,7 @@ PKG_SHA256="0842dc384a23ac33ba3e570c4f3a8ded85963ee4713b1cd21153c3db41813d1e"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://git-scm.com/"
 PKG_URL="https://mirrors.edge.kernel.org/pub/software/scm/git/git-${PKG_VERSION}.tar.gz"
-PKG_DEPENDS_TARGET="toolchain openssl pcre curl libiconv zlib"
+PKG_DEPENDS_TARGET="toolchain openssl curl libiconv zlib"
 PKG_LONGDESC="Git is a free and open source distributed version control system designed to handle everything from small to very large projects with speed and efficiency. "
 PKG_TOOLCHAIN="autotools"
 
