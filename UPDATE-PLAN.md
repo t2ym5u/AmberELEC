@@ -286,7 +286,7 @@ l'amont s'est arrêté. Chacun demande donc un arbitrage propre, pas un bump.
 | `bluetool` | 0.2.3 | PyPI, dernier envoi 2019 | à évaluer au runtime |
 | `tcpbridge` | 1.1.1 | idem, tiré par `bluetool` | idem |
 
-#### 4a — `pcre` retiré *(fait, branche `lot4-prep`)*
+#### 4a — `pcre` retiré *(sur `dev` le 18 novembre 2026, run 44257970903)*
 
 Deux paquets le déclaraient, aucun ne s'en servait. `git` 2.55 a **supprimé**
 `--with-libpcre1` de son `configure.ac` (il émet une erreur si on le passe) et
@@ -298,7 +298,7 @@ quatre paquets qui savent détecter PCRE le refusent nommément (`slang` et
 bibliothèque en fin de vie était compilée à chaque build pour n'être liée
 nulle part.
 
-#### 4b — `p7zip` → 7-Zip officiel *(fait, branche `lot4-prep`)*
+#### 4b — `p7zip` → 7-Zip officiel *(sur `dev` le 18 novembre 2026, run 44257970903)*
 
 Debian (`trixie`), Fedora et Arch ont tous basculé : `p7zip` y est devenu un
 paquet de transition vers `7zip`. Le fork `jinfeihan57/p7zip` 17.05, souvent
