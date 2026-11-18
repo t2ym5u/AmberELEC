@@ -106,6 +106,12 @@ case "${PKG_URL}" in
   *//github.com/facebook/zstd/releases/*|*//github.com/meta/zstd/releases/*)
     GNU_MIRROR="https://sources.buildroot.net/zstd/${PKG_URL##*/}"
     ;;
+  # The other tarball ccache used to fetch from GitHub by itself. Buildroot's
+  # mirror serves the identical tag tarball (sha256 aae608df..., matching
+  # PKG_SHA256).
+  *//github.com/Cyan4973/xxHash/archive/*)
+    GNU_MIRROR="https://sources.buildroot.net/xxhash/${PKG_SOURCE_NAME}"
+    ;;
   *//pyropus.ca*/software/memtester/*)
     GNU_MIRROR="https://deb.debian.org/debian/pool/main/m/memtester/memtester_${PKG_VERSION}.orig.tar.gz"
     ;;
