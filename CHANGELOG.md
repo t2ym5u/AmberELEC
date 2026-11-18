@@ -7,26 +7,18 @@ Il reste volontairement court. Le **pourquoi** de chaque décision, les
 diagnostics et les fausses pistes sont dans [`FORK-CHANGES.md`](FORK-CHANGES.md) ;
 ce qui n'est pas encore fait est dans [`UPDATE-PLAN.md`](UPDATE-PLAN.md).
 
-État au 17 novembre 2026 : **165 commits** d'avance sur `upstream/dev`, 37 de
+État au 18 novembre 2026 : **170 commits** d'avance sur `upstream/dev`, 37 de
 retard.
 
 ---
 
-## Non publié — en préparation sur branches
+## 2026-11-18 — Lot 4 : paquets morts
 
-Rien de ce qui suit n'a encore été validé par un build complet. La capacité de
-build est le goulot : six heures par appareil, un seul cache de compilation
-utilisable à la fois.
+Validé par un build RG351P complet (run 44257970903, 2 h 30, sans warm-up).
+L'image `RG351P-dev-main-20261118_0719-5ea09c4` est publiée. Le build passe
+de 460 à 459 étapes. Les quatre lots du plan sont sur `dev`.
 
-| Branche | Contenu | Commits |
-|---|---|---|
-| `lot4-prep` | paquets morts et leurs remplaçants | 2 |
-
-Le lot 3 est entièrement sur `dev`. Reste `lot4`, en un build : `lot4-prep`
-porte encore l'ancien commit du lot 2 et devra être rebasé sur `dev` avant
-d'atterrir.
-
-### Lot 4 — paquets morts
+### Retiré, remplacé
 
 - **`pcre` 8.45 retiré.** En fin de vie depuis 2021, compilé à chaque build et
   lié par personne : `git` 2.55 a supprimé `--with-libpcre1` de son
