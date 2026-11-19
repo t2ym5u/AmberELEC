@@ -7,8 +7,31 @@ Il reste volontairement court. Le **pourquoi** de chaque décision, les
 diagnostics et les fausses pistes sont dans [`FORK-CHANGES.md`](FORK-CHANGES.md) ;
 ce qui n'est pas encore fait est dans [`UPDATE-PLAN.md`](UPDATE-PLAN.md).
 
-État au 18 novembre 2026 : **170 commits** d'avance sur `upstream/dev`, 37 de
+État au 19 novembre 2026 : **180 commits** d'avance sur `upstream/dev`, 37 de
 retard.
+
+---
+
+## 2026-11-18 — Correctifs amont pour RG351P, xxhash
+
+Validé par un build RG351P complet (run 44331175830, 2 h 32, sans warm-up).
+L'image `RG351P-dev-main-20261118_1503-1e6de18` est publiée. Pas de fusion
+d'`upstream/dev` en bloc : les correctifs utiles à la RG351P sont repris un
+par un.
+
+### Repris d'upstream
+
+- **Premier démarrage** : un message d'initialisation s'affiche, et plus tôt,
+  dès l'init BusyBox.
+- **yabasanshiroSA** : le contexte de l'OSD des FPS est initialisé.
+- **gearsystem** : la remise à zéro par Select est désactivée par défaut.
+- **lib32** : 41a3acad → b385a6f6.
+
+### Corrigé
+
+- **ccache** ne télécharge plus xxhash lui-même, pour la même raison que zstd :
+  pas de nouvel essai ni de miroir. Un paquet `xxhash` fournit la même archive,
+  et `get_archive` se replie sur le miroir de Buildroot.
 
 ---
 
